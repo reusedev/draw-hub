@@ -1,6 +1,7 @@
 package image
 
 import (
+	"fmt"
 	"github.com/reusedev/draw-hub/internal/modules/consts"
 	"github.com/reusedev/draw-hub/tools"
 	"net/http"
@@ -10,17 +11,19 @@ type Requester struct {
 	Supplier     consts.ImageSupplier
 	token        string
 	RequestTypes RequestTypes
+	Parser       Parser
 }
 
-func NewRequester(supplier consts.ImageSupplier, token string, requestTypes RequestTypes) *Requester {
+func NewRequester(supplier consts.ImageSupplier, token string, requestTypes RequestTypes, parser Parser) *Requester {
 	return &Requester{
 		Supplier:     supplier,
 		token:        token,
 		RequestTypes: requestTypes,
+		Parser:       parser,
 	}
 }
 
-func (r *Requester) Do() (*http.Response, error) {
+func (r *Requester) Do() (Response, error) {
 	client := NewClient()
 	body, contentType, err := r.RequestTypes.BodyContentType(r.Supplier)
 	if err != nil {
@@ -40,5 +43,10 @@ func (r *Requester) Do() (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	return resp, nil
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status code: %d", resp.StatusCode)
+	}
+	defer resp.Body.Close()
+	ret, err := r.Parser.Parse(resp)
+	return ret, err
 }
