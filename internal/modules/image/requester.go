@@ -6,13 +6,21 @@ import (
 	"net/http"
 )
 
-type Request struct {
+type Requester struct {
 	Supplier     consts.ImageSupplier
 	token        string
 	RequestTypes RequestTypes
 }
 
-func (r *Request) Do() (*http.Response, error) {
+func NewRequester(supplier consts.ImageSupplier, token string, requestTypes RequestTypes) *Requester {
+	return &Requester{
+		Supplier:     supplier,
+		token:        token,
+		RequestTypes: requestTypes,
+	}
+}
+
+func (r *Requester) Do() (*http.Response, error) {
 	client := NewClient()
 	body, contentType, err := r.RequestTypes.BodyContentType(r.Supplier)
 	if err != nil {
