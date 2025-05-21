@@ -10,7 +10,6 @@ type Request struct {
 	Supplier     consts.ImageSupplier
 	token        string
 	RequestTypes RequestTypes
-	client       Client
 }
 
 func (r *Request) Do() (*http.Response, error) {
@@ -29,7 +28,7 @@ func (r *Request) Do() (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := r.client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
