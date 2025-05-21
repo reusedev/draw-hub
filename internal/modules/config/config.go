@@ -1,13 +1,10 @@
 package config
 
 type Config struct {
-	// 是否转存
-	StorageEnabled bool `yaml:"storage_enabled"`
-	// 转存供应商
+	StorageEnabled  bool   `yaml:"storage_enabled"`
 	StorageSupplier string `yaml:"storage_supplier"`
 }
 
-// AliOss 转存
 type AliOss struct {
 	Endpoint        string `yaml:"endpoint"`
 	AccessKeyId     string `yaml:"access_key_id"`
@@ -22,11 +19,11 @@ type Geek struct {
 	HighAvailableToken string `yaml:"high_available_token"`
 }
 
-type VApi struct {
+type V3 struct {
 	Token string `yaml:"token"`
 }
 
-type TuziApi struct {
+type Tuzi struct {
 	DefaultChannelToken string `yaml:"default_channel_token"`
 	OpenaiChannelToken  string `yaml:"openai_channel_token"`
 }

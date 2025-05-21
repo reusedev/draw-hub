@@ -16,10 +16,10 @@ geek:
   balance_token: ""
   high_available_token: ""
 # V_API https://api.v3.cm/
-v_api:
+v3:
   token: ""
 # 兔子API https://api.tu-zi.com/
-tuzi_api:
+tuzi:
   default_channel_token: ""
   openai_channel_token: ""
 
@@ -30,15 +30,15 @@ tuzi_api:
 request_order:
 # 低速接口请求顺序(调用gpt-4o-image、gpt-4o-image-vip)
   low_speed:
-    - tuzi_api.default_channel_token
+    - tuzi.default_channel_token
     - geek.low_price_token
-    - tuzi_api.default_channel_token.vip
-    - v_api.token
-    - v_api.toke.vip
+    - tuzi.default_channel_token.vip
+    - v3.token
+    - v3.toke.vip
   # 高速接口请求顺序(gpt-image-1)
   high_speed:
     - geek.low_price_token
     - geek.balance_token
     - geek.high_available_token
-    - v_api.token
-    - tuzi_api.openai_channel_token
+    - v3.token
+    - tuzi.openai_channel_token
