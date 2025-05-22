@@ -1,20 +1,20 @@
-package image
+package model
 
 import (
 	"fmt"
-	"github.com/reusedev/draw-hub/internal/modules/consts"
+	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/tools"
 	"net/http"
 )
 
 type Requester struct {
-	Supplier     consts.ImageSupplier
+	Supplier     consts.ModelSupplier
 	token        string
-	RequestTypes RequestTypes
+	RequestTypes RequestContent
 	Parser       Parser
 }
 
-func NewRequester(supplier consts.ImageSupplier, token string, requestTypes RequestTypes, parser Parser) *Requester {
+func NewRequester(supplier consts.ModelSupplier, token string, requestTypes RequestContent, parser Parser) *Requester {
 	return &Requester{
 		Supplier:     supplier,
 		token:        token,
@@ -24,7 +24,7 @@ func NewRequester(supplier consts.ImageSupplier, token string, requestTypes Requ
 }
 
 func (r *Requester) Do() (Response, error) {
-	client := NewClient()
+	client := NewHttpClient()
 	body, contentType, err := r.RequestTypes.BodyContentType(r.Supplier)
 	if err != nil {
 		return nil, err
@@ -32,9 +32,9 @@ func (r *Requester) Do() (Response, error) {
 	req, err := client.NewRequest(
 		http.MethodPost,
 		tools.FullURL(tools.BaseURLBySupplier(r.Supplier), r.RequestTypes.Path()),
-		withHeader("Authorization", "Bearer "+r.token),
-		withHeader("Content-Type", contentType),
-		withBody(body),
+		WithHeader("Authorization", "Bearer "+r.token),
+		WithHeader("Content-Type", contentType),
+		WithBody(body),
 	)
 	if err != nil {
 		return nil, err

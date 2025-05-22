@@ -6,10 +6,10 @@ const (
 	V3BaseUrl   = "https://api.gpt.ge"
 )
 
-type ImageSupplier string
+type ModelSupplier string
 
 const (
-	Geek ImageSupplier = "geek"
-	Tuzi ImageSupplier = "tuzi"
-	V3   ImageSupplier = "v3"
+	Geek ModelSupplier = "geek"
+	Tuzi ModelSupplier = "tuzi"
+	V3   ModelSupplier = "v3"
 )

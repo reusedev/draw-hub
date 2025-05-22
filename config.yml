@@ -7,6 +7,7 @@ ali_oss:
   access_key_id: ""
   access_key_secret: ""
   bucket: ""
+  region: "ap-southeast-1"
   directory: "draw_hub/"
 
 ######## 图片生成服务 ########
@@ -34,7 +35,7 @@ request_order:
     - geek.low_price_token
     - tuzi.default_channel_token.vip
     - v3.token
-    - v3.toke.vip
+    - v3.token.vip
   # 高速接口请求顺序(gpt-image-1)
   high_speed:
     - geek.low_price_token

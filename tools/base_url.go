@@ -1,10 +1,10 @@
 package tools
 
 import (
-	draw_hub "github.com/reusedev/draw-hub/internal/modules/consts"
+	draw_hub "github.com/reusedev/draw-hub/internal/consts"
 )
 
-func BaseURLBySupplier(supplier draw_hub.ImageSupplier) string {
+func BaseURLBySupplier(supplier draw_hub.ModelSupplier) string {
 	switch supplier {
 	case draw_hub.Geek:
 		return draw_hub.GeekBaseURL

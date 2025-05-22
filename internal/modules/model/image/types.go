@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/reusedev/draw-hub/internal/modules/consts"
+	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/tools"
 	"io"
 	"mime/multipart"
@@ -13,23 +13,22 @@ import (
 	"net/textproto"
 )
 
-type RequestTypes interface {
-	BodyContentType(supplier consts.ImageSupplier) (io.Reader, string, error)
-	Path() string
-}
-
-type GPT4oImageVipRequest struct {
+type GPT4oImageRequest struct {
+	Vip      bool   `json:"vip"`
 	ImageURL string `json:"image_url"`
 	Prompt   string `json:"prompt"`
 }
 
-func (g *GPT4oImageVipRequest) BodyContentType(supplier consts.ImageSupplier) (io.Reader, string, error) {
+func (g *GPT4oImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
 	imageBytes, _, err := tools.GetOnlineImage(g.ImageURL)
 	if err != nil {
 		return nil, "", err
 	}
 	body := make(map[string]any)
-	body["model"] = "gpt-4o-image-vip"
+	body["model"] = "gpt-4o-image"
+	if g.Vip {
+		body["model"] = "gpt-4o-image-vip"
+	}
 	body["stream"] = false
 	body["message"] = []map[string]interface{}{
 		{
@@ -54,48 +53,8 @@ func (g *GPT4oImageVipRequest) BodyContentType(supplier consts.ImageSupplier) (i
 	}
 	return bytes.NewBuffer(data), "application/json", nil
 }
-func (g *GPT4oImageVipRequest) Path() string {
-	return "v1/chat/completions"
-}
-
-type GPT4oImageRequest struct {
-	ImageURL string `json:"image_url"`
-	Prompt   string `json:"prompt"`
-}
-
-func (g *GPT4oImageRequest) BodyContentType(supplier consts.ImageSupplier) (io.Reader, string, error) {
-	imageBytes, _, err := tools.GetOnlineImage(g.ImageURL)
-	if err != nil {
-		return nil, "", err
-	}
-	body := make(map[string]any)
-	body["model"] = "gpt-4o-image"
-	body["stream"] = false
-	body["message"] = []map[string]interface{}{
-		{
-			"role": "user",
-			"content": []map[string]interface{}{
-				{
-					"type": "text",
-					"text": g.Prompt,
-				},
-				{
-					"type": "image_url",
-					"image_url": map[string]string{
-						"url": "data:image/png;base64," + base64.StdEncoding.EncodeToString(imageBytes),
-					},
-				},
-			},
-		},
-	}
-	data, err := json.Marshal(body)
-	if err != nil {
-		return nil, "", err
-	}
-	return bytes.NewBuffer(data), "", nil
-}
 func (g *GPT4oImageRequest) Path() string {
-	return "v1/chat/completion"
+	return "v1/chat/completions"
 }
 
 type GPTImage1Request struct {
@@ -105,7 +64,7 @@ type GPTImage1Request struct {
 	Size      string   `json:"size"`
 }
 
-func (g *GPTImage1Request) BodyContentType(supplier consts.ImageSupplier) (io.Reader, string, error) {
+func (g *GPTImage1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
 

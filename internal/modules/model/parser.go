@@ -1,10 +1,9 @@
-package image
+package model
 
 import "net/http"
 
 type Response interface {
-	URLs() ([]string, error)
-	Base64s() ([]string, error)
+	String() string
 }
 
 type Parser interface {
