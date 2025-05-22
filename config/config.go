@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
+	"time"
 )
 
 var GConfig *Config
@@ -30,6 +31,7 @@ func initFromYaml(config []byte) {
 type Config struct {
 	StorageEnabled  bool   `yaml:"storage_enabled"`
 	StorageSupplier string `yaml:"storage_supplier"`
+	URLExpires      string `yaml:"url_expires"`
 	AliOss          `yaml:"ali_oss"`
 	MySQL           `yaml:"mysql"`
 	Geek            `yaml:"geek"`
@@ -45,6 +47,10 @@ func (c *Config) Verify() error {
 	}
 	if c.StorageSupplier != "ali_oss" {
 		return fmt.Errorf("storage_supplier must be ali_oss")
+	}
+	_, err := time.ParseDuration(c.URLExpires)
+	if err != nil {
+		return err
 	}
 	return nil
 }

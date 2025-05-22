@@ -18,6 +18,7 @@ var (
 
 type ossClient struct {
 	*oss.Client
+	endpoint   string
 	bucketName string
 	directory  string
 }
@@ -33,13 +34,10 @@ func InitOSS(config config.AliOss) {
 	}
 	OssClient = &ossClient{
 		Client:     client,
+		endpoint:   config.Endpoint,
 		bucketName: config.Bucket,
 		directory:  config.Directory,
 	}
-}
-
-func (o *ossClient) fullPath(path string) string {
-	return o.directory + path
 }
 
 func (o *ossClient) UploadFile(fName string, file io.Reader) (string, error) {
@@ -49,6 +47,18 @@ func (o *ossClient) UploadFile(fName string, file io.Reader) (string, error) {
 	}
 	key := o.fullPath(uuid.New().String() + "." + parts[len(parts)-1])
 	return key, o.upload(fName, key, file)
+}
+
+func (o *ossClient) URL(key string, expire time.Duration) (string, error) {
+	ret, err := o.Presign(context.TODO(), &oss.GetObjectRequest{Bucket: oss.Ptr(o.bucketName), Key: oss.Ptr(key)}, oss.PresignExpires(expire))
+	if err != nil {
+		return "", err
+	}
+	return ret.URL, nil
+}
+
+func (o *ossClient) fullPath(fName string) string {
+	return o.directory + fName
 }
 
 func (o *ossClient) upload(fName, key string, reader io.Reader) error {
@@ -63,16 +73,4 @@ func (o *ossClient) upload(fName, key string, reader io.Reader) error {
 		return err
 	}
 	return nil
-}
-
-func (o *ossClient) PermanentURL(key string) (string, error) {
-	return "", nil
-}
-
-func (o *ossClient) PreSign(key string, expire time.Duration) (string, error) {
-	ret, err := o.Presign(context.TODO(), oss.OperationInput{Key: oss.Ptr(key)}, oss.PresignExpires(expire))
-	if err != nil {
-		return "", err
-	}
-	return ret.URL, nil
 }

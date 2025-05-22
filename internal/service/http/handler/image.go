@@ -6,9 +6,10 @@ import (
 	"github.com/reusedev/draw-hub/internal/components/mysql"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/storage/ali"
+	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
 	"github.com/reusedev/draw-hub/internal/service/http/model"
-	"github.com/reusedev/draw-hub/internal/service/http/response"
 	"net/http"
+	"time"
 )
 
 func UploadImage(c *gin.Context) {
@@ -24,10 +25,19 @@ func UploadImage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
+	expires, _ := time.ParseDuration(config.GConfig.URLExpires)
+	url, err := ali.OssClient.URL(key, expires)
 	r := model.InputImage{
 		StorageSupplierName: config.GConfig.StorageSupplier,
 		Key:                 key,
+		URL:                 url,
+		CreatedAt:           time.Now(),
 	}
-	mysql.DB.Model(&model.InputImage{}).Create(&r)
-
+	err = mysql.DB.Create(&r).Error
+	if err != nil {
+		logs.Logger.Err(err)
+		c.JSON(http.StatusInternalServerError, response.InternalError)
+		return
+	}
+	c.JSON(http.StatusOK, response.SuccessWithData(r))
 }

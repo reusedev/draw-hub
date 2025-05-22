@@ -1,6 +1,7 @@
 ######## 文件存储服务 ########
 storage_enabled: true
 storage_supplier: "ali_oss"
+url_expires: "7d"
 # 阿里云OSS
 ali_oss:
   endpoint: ""
