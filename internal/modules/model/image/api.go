@@ -1,12 +1,12 @@
 package image
 
-type Api struct {
+import (
+	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
+)
+
+func SLowSpeed(task request.SlowTask) {
 }
 
-func LowSpeed() {
-
-}
-
-func HighSpeed() {
+func FastSpeed(task request.FastSpeed) {
 
 }

@@ -91,6 +91,12 @@ type Tuzi struct {
 }
 
 type RequestOrder struct {
-	LowSpeed  []string `yaml:"low_speed"`
-	HighSpeed []string `yaml:"high_speed"`
+	SlowSpeed []Request `yaml:"slow_speed"`
+	FastSpeed []Request `yaml:"fast_speed"`
+}
+
+type Request struct {
+	Supplier  string `json:"supplier"`
+	TokenName string `json:"token_name"`
+	Model     string `json:"model"`
 }
