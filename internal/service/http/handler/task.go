@@ -15,11 +15,13 @@ import (
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
 	"github.com/reusedev/draw-hub/internal/service/http/model"
 	"github.com/reusedev/draw-hub/tools"
+	"github.com/shopspring/decimal"
 	"net/http"
 	"time"
 )
 
 type TaskHandler struct {
+	speed      consts.TaskSpeed
 	inputImage *model.InputImage
 	task       *model.Task
 	taskImage  *model.TaskImage
@@ -35,14 +37,28 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 		return err
 	}
 	go func() {
-		editRequest := image.SlowRequest{
-			ImageURL: imageURL,
-			Prompt:   form.GetPrompt(),
-		}
-		editResponse := image.SlowSpeed(editRequest)
-		err = h.endWork(editResponse)
-		if err != nil {
-			logs.Logger.Err(err)
+		if h.speed == consts.SlowSpeed {
+			editRequest := image.SlowRequest{
+				ImageURL: imageURL,
+				Prompt:   form.GetPrompt(),
+			}
+			editResponse := image.SlowSpeed(editRequest)
+			err = h.endWork(editResponse)
+			if err != nil {
+				logs.Logger.Err(err)
+			}
+		} else if h.speed == consts.FastSpeed {
+			editRequest := image.FastRequest{
+				ImageURLs: []string{imageURL},
+				Prompt:    form.GetPrompt(),
+				Quality:   form.GetQuality(),
+				Size:      form.GetSize(),
+			}
+			editResponse := image.FastSpeed(editRequest)
+			err = h.endWork(editResponse)
+			if err != nil {
+				logs.Logger.Err(err)
+			}
 		}
 	}()
 	return nil
@@ -78,6 +94,7 @@ func (h *TaskHandler) endWork(response []ai_model.Response) error {
 		exeRecord := model.SupplierInvokeHistory{
 			TaskId:         h.task.Id,
 			SupplierName:   v.GetSupplier(),
+			TokenDesc:      v.GetTokenDesc(),
 			ModelName:      v.GetModel(),
 			StatusCode:     v.GetStatusCode(),
 			FailedRespBody: v.FailedRespBody(),
@@ -103,7 +120,7 @@ func (h *TaskHandler) endWork(response []ai_model.Response) error {
 				Status:   model.TaskStatusSucceed.String(),
 				Progress: 100,
 			}
-			err := mysql.DB.Model(&model.Task{}).Updates(&taskRecord).Error
+			err := mysql.DB.Updates(&taskRecord).Error
 			if err != nil {
 				return err
 			}
@@ -142,6 +159,9 @@ func (h *TaskHandler) endWork(response []ai_model.Response) error {
 				Key:                 key,
 				URL:                 url,
 				Type:                model.OuputImageTypeNormal.String(),
+				CompressionRatio:    decimal.NullDecimal{Valid: false},
+				ModelSupplierName:   v.GetSupplier(),
+				ModelName:           v.GetModel(),
 			}
 			if v.GetModel() == consts.GPT4oImageVip.String() || v.GetModel() == consts.GPT4oImage.String() {
 				imageRecord.OriginalURL = v.GetURLs()[0]
@@ -168,15 +188,33 @@ func (h *TaskHandler) endWork(response []ai_model.Response) error {
 			Id:     h.task.Id,
 			Status: model.TaskStatusFailed.String(),
 		}
-		err := mysql.DB.Model(&model.Task{}).Updates(&taskRecord).Error
+		err := mysql.DB.Updates(&taskRecord).Error
 		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
+func (h *TaskHandler) list(groupId, id string) ([]model.Task, error) {
+	var tasks []model.Task
+	query := mysql.DB.Model(&model.Task{}).
+		Preload("TaskImages").
+		Preload("TaskImages.InputImage").
+		Preload("TaskImages.OutputImage")
+	if groupId != "" {
+		query = query.Where("task_group_id = ?", groupId)
+	}
+	if id != "" {
+		query = query.Where("id = ?", id)
+	}
+	err := query.Find(&tasks).Error
+	if err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
 
-func SLowSpeed(c *gin.Context) {
+func SlowSpeed(c *gin.Context) {
 	form := request.SlowTask{}
 	err := c.ShouldBind(&form)
 	if err != nil {
@@ -190,7 +228,7 @@ func SLowSpeed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	h := TaskHandler{inputImage: &inputImage}
+	h := TaskHandler{speed: consts.SlowSpeed, inputImage: &inputImage}
 	err = h.run(&form)
 
 	if err != nil {
@@ -215,7 +253,7 @@ func FastSpeed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	h := TaskHandler{inputImage: &inputImage}
+	h := TaskHandler{speed: consts.FastSpeed, inputImage: &inputImage}
 	err = h.run(&form)
 
 	if err != nil {
@@ -224,4 +262,17 @@ func FastSpeed(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
+}
+
+func TaskQuery(c *gin.Context) {
+	id := c.Query("id")
+	groupId := c.Query("group_id")
+	h := TaskHandler{}
+	tasks, err := h.list(groupId, id)
+	if err != nil {
+		logs.Logger.Err(err)
+		c.JSON(http.StatusInternalServerError, response.InternalError)
+		return
+	}
+	c.JSON(http.StatusOK, response.SuccessWithData(tasks))
 }

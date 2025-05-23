@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai_model"
 	"github.com/reusedev/draw-hub/tools"
@@ -27,12 +28,12 @@ func (g *GPT4oImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.R
 		return nil, "", err
 	}
 	body := make(map[string]any)
-	body["ai_model"] = "gpt-4o-image"
+	body["model"] = "gpt-4o-image"
 	if g.Vip {
-		body["ai_model"] = "gpt-4o-image-vip"
+		body["model"] = "gpt-4o-image-vip"
 	}
 	body["stream"] = false
-	body["message"] = []map[string]interface{}{
+	body["messages"] = []map[string]interface{}{
 		{
 			"role": "user",
 			"content": []map[string]interface{}{
@@ -58,10 +59,12 @@ func (g *GPT4oImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.R
 func (g *GPT4oImageRequest) Path() string {
 	return "v1/chat/completions"
 }
-func (g *GPT4oImageRequest) InitResponse(supplier string, duration time.Duration) ai_model.Response {
+func (g *GPT4oImageRequest) InitResponse(supplier string, duration time.Duration, tokenDesc string) ai_model.Response {
 	ret := &GPT4oImageResponse{
-		Supplier: supplier,
-		Duration: duration,
+		Supplier:  supplier,
+		TokenDesc: tokenDesc,
+		Duration:  duration,
+		URLs:      make([]string, 0),
 	}
 	if g.Vip {
 		ret.Model = consts.GPT4oImageVip.String()
@@ -79,33 +82,66 @@ type GPTImage1Request struct {
 }
 
 func (g *GPTImage1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
-	payload := &bytes.Buffer{}
-	writer := multipart.NewWriter(payload)
+	if supplier == consts.Geek {
+		body := map[string]interface{}{}
+		body["model"] = "gpt-image-1"
+		body["n"] = 1
+		body["prompt"] = g.Prompt
+		body["image"] = g.ImageURLs[0]
+		if g.Size != "" {
+			body["size"] = g.Size
+		}
+		if g.Quality != "" {
+			body["quality"] = g.Quality
+		}
+		b, err := jsoniter.Marshal(body)
+		if err != nil {
+			return nil, "", err
+		}
+		payload := bytes.NewBuffer(b)
+		return payload, "application/json", nil
+	} else {
+		payload := &bytes.Buffer{}
+		writer := multipart.NewWriter(payload)
 
-	for _, f := range g.ImageURLs {
-		imageBytes, fName, err := tools.GetOnlineImage(f)
-		header := make(textproto.MIMEHeader)
-		header.Set("Content-Type", http.DetectContentType(imageBytes))
-		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="image"; filename="%s"`, fName))
-		filePart, err := writer.CreatePart(header)
+		for _, f := range g.ImageURLs {
+			imageBytes, fName, err := tools.GetOnlineImage(f)
+			header := make(textproto.MIMEHeader)
+			header.Set("Content-Type", http.DetectContentType(imageBytes))
+			header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="image"; filename="%s"`, fName))
+			filePart, err := writer.CreatePart(header)
+			if err != nil {
+				return nil, "", err
+			}
+			_, err = filePart.Write(imageBytes)
+			if err != nil {
+				return nil, "", err
+			}
+		}
+		_ = writer.WriteField("prompt", g.Prompt)
+		_ = writer.WriteField("model", "gpt-image-1")
+		if g.Quality != "" {
+			_ = writer.WriteField("quality", g.Quality)
+		}
+		if g.Size != "" {
+			_ = writer.WriteField("size", g.Size)
+		}
+		err := writer.Close()
 		if err != nil {
 			return nil, "", err
 		}
-		_, err = filePart.Write(imageBytes)
-		if err != nil {
-			return nil, "", err
-		}
+		return payload, writer.FormDataContentType(), nil
 	}
-	_ = writer.WriteField("prompt", g.Prompt)
-	_ = writer.WriteField("ai_model", "gpt-image-1")
-	_ = writer.WriteField("quality", g.Quality)
-	_ = writer.WriteField("size", g.Size)
-	err := writer.Close()
-	if err != nil {
-		return nil, "", err
-	}
-	return payload, writer.FormDataContentType(), nil
 }
 func (g *GPTImage1Request) Path() string {
 	return "v1/images/edits"
+}
+func (g *GPTImage1Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) ai_model.Response {
+	ret := &GPTImage1Response{
+		Supplier:  supplier,
+		TokenDesc: tokenDesc,
+		Duration:  duration,
+	}
+	ret.Model = consts.GPTImage1.String()
+	return ret
 }

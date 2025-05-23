@@ -12,7 +12,7 @@ var DB *gorm.DB
 func InitMySQL(config config.MySQL) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
 		config.Username, config.Password, config.Host, config.Port, config.Database, config.Charset)
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{DisableForeignKeyConstraintWhenMigrating: true})
 	if err != nil {
 		panic(err)
 	}
@@ -27,7 +27,7 @@ func InitMySQL(config config.MySQL) {
 
 func CreateDataBase(config config.MySQL) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?parseTime=True&loc=Local", config.Username, config.Password, config.Host, config.Port)
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{DisableForeignKeyConstraintWhenMigrating: true})
 	if err != nil {
 		panic(err)
 	}

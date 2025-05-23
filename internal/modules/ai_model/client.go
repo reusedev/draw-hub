@@ -7,36 +7,36 @@ import (
 	"net/http"
 )
 
-type HttpClient struct {
+type httpClient struct {
 	HttpClient *http.Client
 }
 
-type RequestOption func(options *requestOptions)
+type requestOption func(options *requestOptions)
 
 type requestOptions struct {
 	body   any
 	header http.Header
 }
 
-func WithBody(body any) RequestOption {
+func withBody(body any) requestOption {
 	return func(c *requestOptions) {
 		c.body = body
 	}
 }
 
-func WithHeader(key, value string) RequestOption {
+func withHeader(key, value string) requestOption {
 	return func(c *requestOptions) {
 		c.header.Set(key, value)
 	}
 }
 
-func NewHttpClient() *HttpClient {
-	return &HttpClient{
+func newHttpClient() *httpClient {
+	return &httpClient{
 		HttpClient: http.DefaultClient,
 	}
 }
 
-func (c *HttpClient) NewRequest(method string, url string, option ...RequestOption) (*http.Request, error) {
+func (c *httpClient) newRequest(method string, url string, option ...requestOption) (*http.Request, error) {
 	options := &requestOptions{header: http.Header{}}
 	for _, opt := range option {
 		opt(options)
@@ -64,6 +64,6 @@ func (c *HttpClient) NewRequest(method string, url string, option ...RequestOpti
 	return req, nil
 }
 
-func (c *HttpClient) Do(req *http.Request) (*http.Response, error) {
+func (c *httpClient) do(req *http.Request) (*http.Response, error) {
 	return c.HttpClient.Do(req)
 }

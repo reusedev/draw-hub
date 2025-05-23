@@ -29,3 +29,10 @@ const (
 func (m Model) String() string {
 	return string(m)
 }
+
+type TaskSpeed string
+
+const (
+	SlowSpeed TaskSpeed = "slow"
+	FastSpeed TaskSpeed = "fast"
+)

@@ -8,6 +8,7 @@ import (
 type Response interface {
 	GetModel() string
 	GetSupplier() string
+	GetTokenDesc() string
 	GetStatusCode() int
 	GetRespAt() time.Time
 	FailedRespBody() string // != 200

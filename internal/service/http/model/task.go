@@ -3,19 +3,25 @@ package model
 import "time"
 
 type Task struct {
-	Id           int       `json:"id" gorm:"primaryKey"`
-	TaskGroupId  string    `json:"task_group_id" gorm:"column:task_group_id;type:varchar(50)"`
-	Type         string    `json:"type" gorm:"column:type;type:enum('generate', 'edit')"`
-	Prompt       string    `json:"prompt" gorm:"column:prompt;type:varchar(5000)"`
-	Model        string    `json:"ai_model" gorm:"column:ai_model;type:varchar(20)"`
-	Quality      string    `json:"quality" gorm:"column:quality;type:varchar(20)"`
-	Size         string    `json:"size" gorm:"column:size;type:varchar(20)"`
-	Status       string    `json:"status" gorm:"column:status;type:enum('queued', 'running', 'succeed', 'failed')"`
-	FailedReason string    `json:"failed_reason" gorm:"column:failed_reason;type:varchar(1000)"`
-	Progress     float32   `json:"progress" gorm:"column:progress;type:float"`
-	CreatedAt    time.Time `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
-	UpdatedAt    time.Time `json:"updated_at" gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
+	Id           int         `json:"id" gorm:"primaryKey"`
+	TaskGroupId  string      `json:"task_group_id" gorm:"column:task_group_id;type:varchar(50)"`
+	Type         string      `json:"type" gorm:"column:type;type:enum('generate', 'edit')"`
+	Prompt       string      `json:"prompt" gorm:"column:prompt;type:varchar(5000)"`
+	Model        string      `json:"model" gorm:"column:model;type:varchar(20)"`
+	Quality      string      `json:"quality" gorm:"column:quality;type:varchar(20)"`
+	Size         string      `json:"size" gorm:"column:size;type:varchar(20)"`
+	Status       string      `json:"status" gorm:"column:status;type:enum('queued', 'running', 'succeed', 'failed')"`
+	FailedReason string      `json:"failed_reason" gorm:"column:failed_reason;type:varchar(1000)"`
+	Progress     float32     `json:"progress" gorm:"column:progress;type:float"`
+	CreatedAt    time.Time   `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
+	UpdatedAt    time.Time   `json:"updated_at" gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
+	TaskImages   []TaskImage `json:"task_images" gorm:"foreignKey:TaskId"`
 }
+
+func (Task) TableName() string {
+	return "task"
+}
+
 type TaskType string
 
 const (
@@ -44,6 +50,7 @@ type SupplierInvokeHistory struct {
 	Id             int       `json:"id" gorm:"primaryKey"`
 	TaskId         int       `json:"task_id" gorm:"column:task_id;type:int"`
 	SupplierName   string    `json:"supplier_name" gorm:"column:supplier_name;type:varchar(20)"`
+	TokenDesc      string    `json:"token_desc" gorm:"column:token_desc;type:varchar(20)"`
 	ModelName      string    `json:"model_name" gorm:"column:model_name;type:varchar(20)"`
 	StatusCode     int       `json:"status_code" gorm:"column:status_code;type:int"`
 	FailedRespBody string    `json:"failed_resp_body" gorm:"column:failed_resp_body;type:varchar(2000)"`
@@ -51,10 +58,20 @@ type SupplierInvokeHistory struct {
 	CreatedAt      time.Time `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
 }
 
+func (SupplierInvokeHistory) TableName() string {
+	return "supplier_invoke_history"
+}
+
 type TaskImage struct {
-	TaskId  int    `json:"task_id" gorm:"column:task_id;type:int;primaryKey"`
-	ImageId int    `json:"image_id" gorm:"column:image_id;type:int;primaryKey"`
-	Type    string `json:"type" gorm:"column:type;type:enum('input', 'output')"`
+	TaskId      int         `json:"task_id" gorm:"column:task_id;type:int;primaryKey"`
+	ImageId     int         `json:"image_id" gorm:"column:image_id;type:int;primaryKey"`
+	Type        string      `json:"type" gorm:"column:type;type:enum('input', 'output');primaryKey"`
+	InputImage  InputImage  `json:"input_image" gorm:"foreignKey:ImageId;references:Id"`
+	OutputImage OutputImage `json:"output_image" gorm:"foreignKey:ImageId;references:Id"`
+}
+
+func (TaskImage) TableName() string {
+	return "task_image"
 }
 
 type TaskImageType string

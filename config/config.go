@@ -98,5 +98,6 @@ type RequestOrder struct {
 type Request struct {
 	Supplier string `json:"supplier"`
 	Token    string `json:"token"`
+	Desc     string `json:"desc"`
 	Model    string `json:"ai_model"`
 }

@@ -20,10 +20,9 @@ func initRouter(e *gin.Engine) {
 	v1 := e.Group("/v1")
 	task := v1.Group("/task")
 	{
-		task.POST("/slow", handler.SLowSpeed)
+		task.POST("/slow", handler.SlowSpeed)
 		task.POST("/fast", handler.FastSpeed)
-		task.GET("")
-		task.GET("/group")
+		task.GET("", handler.TaskQuery)
 	}
 
 	file := v1.Group("/images")

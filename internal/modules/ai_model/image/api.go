@@ -29,7 +29,7 @@ func SlowSpeed(request SlowRequest) []ai_model.Response {
 		if order.Model == consts.GPT4oImageVip.String() {
 			content.Vip = true
 		}
-		requester := ai_model.NewRequester(consts.ModelSupplier(order.Supplier), order.Token, &content, &GPT4oImageParser{})
+		requester := ai_model.NewRequester(consts.ModelSupplier(order.Supplier), ai_model.Token{Token: order.Token, Desc: order.Desc}, &content, &GPT4oImageParser{})
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err)
@@ -43,6 +43,25 @@ func SlowSpeed(request SlowRequest) []ai_model.Response {
 	return ret
 }
 
-func FastSpeed(request FastRequest) {
-
+func FastSpeed(request FastRequest) []ai_model.Response {
+	ret := make([]ai_model.Response, 0)
+	for _, order := range config.GConfig.RequestOrder.FastSpeed {
+		content := GPTImage1Request{
+			ImageURLs: request.ImageURLs,
+			Prompt:    request.Prompt,
+			Quality:   request.Quality,
+			Size:      request.Size,
+		}
+		requester := ai_model.NewRequester(consts.ModelSupplier(order.Supplier), ai_model.Token{Token: order.Token, Desc: order.Desc}, &content, &GPTImage1Parser{})
+		response, err := requester.Do()
+		if err != nil {
+			logs.Logger.Err(err)
+			continue
+		}
+		ret = append(ret, response)
+		if response.Succeed() {
+			break
+		}
+	}
+	return ret
 }

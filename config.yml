@@ -34,43 +34,53 @@ request_order:
   slow_speed:
     -
       supplier: "tuzi"
-      token: "default"
+      token: "sk-"
+      desc: "default"
       model: "gpt-4o-image"
     -
       supplier: "geek"
-      token: "low_price"
+      token: "sk-"
+      desc: "low_price"
       model: "gpt-4o-image"
     -
       supplier: "tuzi"
-      token: "default"
+      token: "sk-"
+      desc: "default"
       model: "gpt-4o-image-vip"
     -
       supplier: "v3"
-      token: "token"
+      token: "sk-"
+      desc: "default"
       model: "gpt-4o-image"
     -
       supplier: "v3"
-      token: "token"
+      token: "sk-"
+      desc: "default"
       model: "gpt-4o-image-vip"
   # 高速接口请求顺序(gpt-image-1)
   fast_speed:
     -
       supplier: "geek"
-      token: "low_price"
+      token: "sk-"
+      desc: "low_price"
       model: "gpt-image-1"
     -
       supplier: "geek"
-      token: "balance"
+      token: "sk-"
+      desc: "balance"
       model: "gpt-image-1"
     -
       supplier: "geek"
-      token: "high_available"
+      token: "sk-"
+      desc: "high_available"
       model: "gpt-image-1"
     -
       supplier: "v3"
-      token: "token"
+      token: "sk-"
+      desc: "default"
       model: "gpt-image-1"
     -
       supplier: "tuzi"
-      token: "openai_channel"
+      token: "sk-"
+      desc: "openai_channel"
       model: "gpt-image-1"
