@@ -1,12 +1,14 @@
 package ali
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss/credentials"
 	"github.com/google/uuid"
 	"github.com/reusedev/draw-hub/config"
+	"github.com/reusedev/draw-hub/tools"
 	"io"
 	"strings"
 	"time"
@@ -17,7 +19,7 @@ var (
 )
 
 type ossClient struct {
-	*oss.Client
+	client     *oss.Client
 	endpoint   string
 	bucketName string
 	directory  string
@@ -33,14 +35,14 @@ func InitOSS(config config.AliOss) {
 		panic("create oss client failed")
 	}
 	OssClient = &ossClient{
-		Client:     client,
+		client:     client,
 		endpoint:   config.Endpoint,
 		bucketName: config.Bucket,
 		directory:  config.Directory,
 	}
 }
 
-func (o *ossClient) UploadFile(fName string, file io.Reader) (string, error) {
+func (o *ossClient) UploadFileWithName(fName string, file io.Reader) (string, error) {
 	parts := strings.Split(fName, ".")
 	if len(parts) < 2 {
 		return "", fmt.Errorf("file name %s is invalid", fName)
@@ -49,8 +51,14 @@ func (o *ossClient) UploadFile(fName string, file io.Reader) (string, error) {
 	return key, o.upload(fName, key, file)
 }
 
+func (o *ossClient) UploadImage(b []byte) (string, error) {
+	fName := uuid.New().String() + "." + tools.DetectImageType(b)
+	key := o.fullPath(fName)
+	return key, o.upload(fName, key, bytes.NewReader(b))
+}
+
 func (o *ossClient) URL(key string, expire time.Duration) (string, error) {
-	ret, err := o.Presign(context.TODO(), &oss.GetObjectRequest{Bucket: oss.Ptr(o.bucketName), Key: oss.Ptr(key)}, oss.PresignExpires(expire))
+	ret, err := o.client.Presign(context.TODO(), &oss.GetObjectRequest{Bucket: oss.Ptr(o.bucketName), Key: oss.Ptr(key)}, oss.PresignExpires(expire))
 	if err != nil {
 		return "", err
 	}
@@ -68,7 +76,7 @@ func (o *ossClient) upload(fName, key string, reader io.Reader) error {
 		Body:               reader,
 		ContentDisposition: oss.Ptr(fmt.Sprintf("attachment; filename=\"%s\"", fName)),
 	}
-	_, err := o.PutObject(context.TODO(), request)
+	_, err := o.client.PutObject(context.TODO(), request)
 	if err != nil {
 		return err
 	}

@@ -24,3 +24,14 @@ type OutputImage struct {
 	ModelName           string    `json:"model_name" gorm:"column:model_name;type:varchar(20)"`
 	CreatedAt           time.Time `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
 }
+
+type OutputImageType string
+
+const (
+	OuputImageTypeNormal     OutputImageType = "normal"
+	OuputImageTypeCompressed OutputImageType = "compressed"
+)
+
+func (o OutputImageType) String() string {
+	return string(o)
+}

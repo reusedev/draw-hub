@@ -4,18 +4,26 @@ storage_supplier: "ali_oss"
 url_expires: "168h"
 # 阿里云OSS
 ali_oss:
-  endpoint: ""
+  endpoint: "https://oss-ap-southeast-1.aliyuncs.com"
   access_key_id: ""
   access_key_secret: ""
   bucket: ""
   region: "ap-southeast-1"
   directory: "draw_hub/"
+mysql:
+  host: ""
+  port: 3306
+  username: ""
+  password: ""
+  database: "draw_hub"
+  charset: "utf8mb4"
+  max_idle_conns: 10
+  max_open_conns: 100
 
 ######## 图片生成服务 ########
 # 极客智坊 https://geekai.dev/
 # V_API https://api.v3.cm/
 # 兔子API https://api.tu-zi.com/
-
 
 # 请求顺序
 # 1. 先请求极客智坊的低价接口

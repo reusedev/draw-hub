@@ -38,3 +38,18 @@ func GetOnlineImage(url string) (bytes []byte, fName string, err error) {
 	}
 	return
 }
+
+func DetectImageType(data []byte) string {
+	switch http.DetectContentType(data) {
+	case "image/jpeg":
+		return "jpeg"
+	case "image/png":
+		return "png"
+	case "image/gif":
+		return "gif"
+	case "image/webp":
+		return "webp"
+	default:
+		return "unknown"
+	}
+}

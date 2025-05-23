@@ -1,10 +1,10 @@
-package model
+package ai_model
 
 import (
-	"fmt"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/tools"
 	"net/http"
+	"time"
 )
 
 type Requester struct {
@@ -39,14 +39,15 @@ func (r *Requester) Do() (Response, error) {
 	if err != nil {
 		return nil, err
 	}
+	start := time.Now()
 	resp, err := client.Do(req)
+	duration := time.Since(start)
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status code: %d", resp.StatusCode)
-	}
 	defer resp.Body.Close()
-	ret, err := r.Parser.Parse(resp)
-	return ret, err
+	ret := r.RequestTypes.InitResponse(r.Supplier.String(), duration)
+	err = r.Parser.Parse(resp, ret)
+
+	return ret, nil
 }

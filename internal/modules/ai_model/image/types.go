@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai_model"
 	"github.com/reusedev/draw-hub/tools"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+	"time"
 )
 
 type GPT4oImageRequest struct {
@@ -25,9 +27,9 @@ func (g *GPT4oImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.R
 		return nil, "", err
 	}
 	body := make(map[string]any)
-	body["model"] = "gpt-4o-image"
+	body["ai_model"] = "gpt-4o-image"
 	if g.Vip {
-		body["model"] = "gpt-4o-image-vip"
+		body["ai_model"] = "gpt-4o-image-vip"
 	}
 	body["stream"] = false
 	body["message"] = []map[string]interface{}{
@@ -56,6 +58,18 @@ func (g *GPT4oImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.R
 func (g *GPT4oImageRequest) Path() string {
 	return "v1/chat/completions"
 }
+func (g *GPT4oImageRequest) InitResponse(supplier string, duration time.Duration) ai_model.Response {
+	ret := &GPT4oImageResponse{
+		Supplier: supplier,
+		Duration: duration,
+	}
+	if g.Vip {
+		ret.Model = consts.GPT4oImageVip.String()
+	} else {
+		ret.Model = consts.GPT4oImage.String()
+	}
+	return ret
+}
 
 type GPTImage1Request struct {
 	ImageURLs []string `json:"image_urls"`
@@ -83,7 +97,7 @@ func (g *GPTImage1Request) BodyContentType(supplier consts.ModelSupplier) (io.Re
 		}
 	}
 	_ = writer.WriteField("prompt", g.Prompt)
-	_ = writer.WriteField("model", "gpt-image-1")
+	_ = writer.WriteField("ai_model", "gpt-image-1")
 	_ = writer.WriteField("quality", g.Quality)
 	_ = writer.WriteField("size", g.Size)
 	err := writer.Close()

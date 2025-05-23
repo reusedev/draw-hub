@@ -19,7 +19,7 @@ func UploadImage(c *gin.Context) {
 		return
 	}
 	defer file.Close()
-	key, err := ali.OssClient.UploadFile(header.Filename, file)
+	key, err := ali.OssClient.UploadFileWithName(header.Filename, file)
 	if err != nil {
 		logs.Logger.Err(err)
 		c.JSON(http.StatusInternalServerError, response.InternalError)

@@ -1,4 +1,4 @@
-package model
+package ai_model
 
 import (
 	"bytes"
@@ -37,7 +37,7 @@ func NewHttpClient() *HttpClient {
 }
 
 func (c *HttpClient) NewRequest(method string, url string, option ...RequestOption) (*http.Request, error) {
-	options := &requestOptions{}
+	options := &requestOptions{header: http.Header{}}
 	for _, opt := range option {
 		opt(options)
 	}

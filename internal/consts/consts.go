@@ -13,3 +13,19 @@ const (
 	Tuzi ModelSupplier = "tuzi"
 	V3   ModelSupplier = "v3"
 )
+
+func (m ModelSupplier) String() string {
+	return string(m)
+}
+
+type Model string
+
+const (
+	GPT4oImage    Model = "gpt-4o-image"
+	GPT4oImageVip Model = "gpt-4o-image-vip"
+	GPTImage1     Model = "gpt-image-1"
+)
+
+func (m Model) String() string {
+	return string(m)
+}

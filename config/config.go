@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/reusedev/draw-hub/internal/consts"
 	"gopkg.in/yaml.v3"
 	"time"
 )
@@ -44,6 +45,28 @@ func (c *Config) Verify() error {
 	if err != nil {
 		return err
 	}
+	for _, o := range c.RequestOrder.SlowSpeed {
+		if o.Supplier != consts.Geek.String() && o.Supplier != consts.Tuzi.String() && o.Supplier != consts.V3.String() {
+			return fmt.Errorf("request_order.slow_speed.supplier must be geek, tuzi or v3")
+		}
+		if o.Model != consts.GPT4oImage.String() && o.Model != consts.GPT4oImageVip.String() {
+			return fmt.Errorf("request_order.slow_speed.ai_model must be gpt-4o-image or gpt-4o-image-vip")
+		}
+		if o.Token == "" {
+			return fmt.Errorf("request_order.slow_speed.token must not be empty")
+		}
+	}
+	for _, o := range c.RequestOrder.FastSpeed {
+		if o.Supplier != consts.Geek.String() && o.Supplier != consts.Tuzi.String() && o.Supplier != consts.V3.String() {
+			return fmt.Errorf("request_order.slow_speed.supplier must be geek, tuzi or v3")
+		}
+		if o.Model != consts.GPTImage1.String() {
+			return fmt.Errorf("request_order.slow_speed.ai_model must be gpt-image-1")
+		}
+		if o.Token == "" {
+			return fmt.Errorf("request_order.fast_speed.token must not be empty")
+		}
+	}
 	return nil
 }
 
@@ -75,5 +98,5 @@ type RequestOrder struct {
 type Request struct {
 	Supplier string `json:"supplier"`
 	Token    string `json:"token"`
-	Model    string `json:"model"`
+	Model    string `json:"ai_model"`
 }
