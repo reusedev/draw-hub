@@ -3,19 +3,14 @@ package config
 import (
 	"fmt"
 	"gopkg.in/yaml.v3"
-	"os"
 	"time"
 )
 
 var GConfig *Config
 
-func Init(filePath string) {
-	config, err := os.ReadFile(filePath)
-	if err != nil {
-		panic(err)
-	}
-	initFromYaml(config)
-	err = GConfig.Verify()
+func Init(data []byte) {
+	initFromYaml(data)
+	err := GConfig.Verify()
 	if err != nil {
 		panic(err)
 	}
@@ -34,9 +29,6 @@ type Config struct {
 	URLExpires      string `yaml:"url_expires"`
 	AliOss          `yaml:"ali_oss"`
 	MySQL           `yaml:"mysql"`
-	Geek            `yaml:"geek"`
-	Tuzi            `yaml:"tuzi"`
-	V3              `yaml:"v3"`
 	RequestOrder    `yaml:"request_order"`
 }
 
@@ -75,28 +67,13 @@ type MySQL struct {
 	MaxOpenConns int    `yaml:"max_open_conns"`
 }
 
-type Geek struct {
-	LowPriceToken      string `yaml:"low_price_token"`
-	BalanceToken       string `yaml:"balance_token"`
-	HighAvailableToken string `yaml:"high_available_token"`
-}
-
-type V3 struct {
-	Token string `yaml:"token"`
-}
-
-type Tuzi struct {
-	DefaultChannelToken string `yaml:"default_channel_token"`
-	OpenaiChannelToken  string `yaml:"openai_channel_token"`
-}
-
 type RequestOrder struct {
 	SlowSpeed []Request `yaml:"slow_speed"`
 	FastSpeed []Request `yaml:"fast_speed"`
 }
 
 type Request struct {
-	Supplier  string `json:"supplier"`
-	TokenName string `json:"token_name"`
-	Model     string `json:"model"`
+	Supplier string `json:"supplier"`
+	Token    string `json:"token"`
+	Model    string `json:"model"`
 }

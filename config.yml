@@ -1,7 +1,7 @@
 ######## 文件存储服务 ########
 storage_enabled: true
 storage_supplier: "ali_oss"
-url_expires: "7d"
+url_expires: "168h"
 # 阿里云OSS
 ali_oss:
   endpoint: ""
@@ -25,18 +25,44 @@ request_order:
 # 低速接口请求顺序(调用gpt-4o-image、gpt-4o-image-vip)
   slow_speed:
     -
-      - supplier: "tuzi"
-      - token: ""
-      - model: ""
-    - tuzi.default_channel_token
-    - geek.low_price_token
-    - tuzi.default_channel_token.vip
-    - v3.token
-    - v3.token.vip
+      supplier: "tuzi"
+      token: "default"
+      model: "gpt-4o-image"
+    -
+      supplier: "geek"
+      token: "low_price"
+      model: "gpt-4o-image"
+    -
+      supplier: "tuzi"
+      token: "default"
+      model: "gpt-4o-image-vip"
+    -
+      supplier: "v3"
+      token: "token"
+      model: "gpt-4o-image"
+    -
+      supplier: "v3"
+      token: "token"
+      model: "gpt-4o-image-vip"
   # 高速接口请求顺序(gpt-image-1)
   fast_speed:
-    - geek.low_price_token
-    - geek.balance_token
-    - geek.high_available_token
-    - v3.token
-    - tuzi.openai_channel_token
+    -
+      supplier: "geek"
+      token: "low_price"
+      model: "gpt-image-1"
+    -
+      supplier: "geek"
+      token: "balance"
+      model: "gpt-image-1"
+    -
+      supplier: "geek"
+      token: "high_available"
+      model: "gpt-image-1"
+    -
+      supplier: "v3"
+      token: "token"
+      model: "gpt-image-1"
+    -
+      supplier: "tuzi"
+      token: "openai_channel"
+      model: "gpt-image-1"

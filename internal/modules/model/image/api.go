@@ -1,12 +1,17 @@
 package image
 
-import (
-	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
-)
-
-func SLowSpeed(task request.SlowTask) {
+type Request struct {
+	Speed    string `json:"speed"`
+	ImageURL string `json:"image_url"`
+	Prompt   string `json:"prompt"`
+	Quality  string `json:"quality"`
+	Size     string `json:"size"`
 }
 
-func FastSpeed(task request.FastSpeed) {
+func SlowSpeed(request Request) {
+
+}
+
+func FastSpeed(request Request) {
 
 }
