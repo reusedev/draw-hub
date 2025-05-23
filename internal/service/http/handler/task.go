@@ -19,68 +19,64 @@ import (
 	"time"
 )
 
-func SLowSpeed(c *gin.Context) {
-	form := request.SlowTask{}
-	err := c.ShouldBind(&form)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ParamError)
-		return
-	}
-	var imageRecord model.InputImage
-	err = mysql.DB.Model(&model.InputImage{}).Where("id = ?", form.ImageId).First(&imageRecord).Error
-	if err != nil {
-		logs.Logger.Err(err)
-		c.JSON(http.StatusBadRequest, response.ParamError)
-		return
-	}
-	imageURL, err := ali.OssClient.URL(imageRecord.Key, time.Hour)
-	if err != nil {
-		logs.Logger.Err(err)
-		c.JSON(http.StatusInternalServerError, response.InternalError)
-		return
-	}
+type TaskHandler struct {
+	inputImage *model.InputImage
+	task       *model.Task
+	taskImage  *model.TaskImage
+}
 
-	taskRecord := model.Task{
-		TaskGroupId: form.GroupId,
-		Type:        model.TaskTypeEdit.String(),
-		Prompt:      form.Prompt,
-		Status:      model.TaskStatusRunning.String(),
-	}
-	err = mysql.DB.Model(&model.Task{}).Create(&taskRecord).Error
+func (h *TaskHandler) run(form request.TaskForm) error {
+	imageURL, err := ali.OssClient.URL(h.inputImage.Key, time.Hour)
 	if err != nil {
-		logs.Logger.Err(err)
-		c.JSON(http.StatusInternalServerError, response.InternalError)
-		return
+		return err
 	}
+	err = h.createTaskRecord(form)
+	if err != nil {
+		return err
+	}
+	go func() {
+		editRequest := image.SlowRequest{
+			ImageURL: imageURL,
+			Prompt:   form.GetPrompt(),
+		}
+		editResponse := image.SlowSpeed(editRequest)
+		err = h.endWork(editResponse)
+		if err != nil {
+			logs.Logger.Err(err)
+		}
+	}()
+	return nil
+}
+func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
+	taskRecord := model.Task{
+		TaskGroupId: form.GetGroupId(),
+		Type:        model.TaskTypeEdit.String(),
+		Prompt:      form.GetPrompt(),
+		Status:      model.TaskStatusRunning.String(),
+		Quality:     form.GetQuality(),
+		Size:        form.GetSize(),
+	}
+	err := mysql.DB.Model(&model.Task{}).Create(&taskRecord).Error
+	if err != nil {
+		return err
+	}
+	h.task = &taskRecord
 	taskImageRecord := model.TaskImage{
-		ImageId: form.ImageId,
+		ImageId: form.GetImageId(),
 		TaskId:  taskRecord.Id,
 		Type:    model.TaskImageTypeInput.String(),
 	}
 	err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
 	if err != nil {
-		logs.Logger.Err(err)
-		c.JSON(http.StatusInternalServerError, response.InternalError)
-		return
+		return err
 	}
-	go func() {
-		editRequest := image.SlowRequest{
-			ImageURL: imageURL,
-			Prompt:   form.Prompt,
-		}
-		editResponse := image.SlowSpeed(editRequest)
-		err = exeEndWork(editResponse, taskRecord)
-		if err != nil {
-			logs.Logger.Err(err)
-		}
-	}()
-	c.JSON(http.StatusOK, response.SuccessWithData(taskRecord))
+	h.taskImage = &taskImageRecord
+	return nil
 }
-
-func exeEndWork(response []ai_model.Response, task model.Task) error {
+func (h *TaskHandler) endWork(response []ai_model.Response) error {
 	for _, v := range response {
 		exeRecord := model.SupplierInvokeHistory{
-			TaskId:         task.Id,
+			TaskId:         h.task.Id,
 			SupplierName:   v.GetSupplier(),
 			ModelName:      v.GetModel(),
 			StatusCode:     v.GetStatusCode(),
@@ -99,10 +95,10 @@ func exeEndWork(response []ai_model.Response, task model.Task) error {
 		if v.Succeed() {
 			succeed = true
 			if i != len(response)-1 {
-				return fmt.Errorf("not the last response, but succeed. task_id: %d", task.Id)
+				return fmt.Errorf("not the last response, but succeed. task_id: %d", h.task.Id)
 			}
 			taskRecord := model.Task{
-				Id:       task.Id,
+				Id:       h.task.Id,
 				Model:    v.GetModel(),
 				Status:   model.TaskStatusSucceed.String(),
 				Progress: 100,
@@ -169,7 +165,7 @@ func exeEndWork(response []ai_model.Response, task model.Task) error {
 	// todo 总结失败原因
 	if !succeed {
 		taskRecord := model.Task{
-			Id:     task.Id,
+			Id:     h.task.Id,
 			Status: model.TaskStatusFailed.String(),
 		}
 		err := mysql.DB.Model(&model.Task{}).Updates(&taskRecord).Error
@@ -180,6 +176,31 @@ func exeEndWork(response []ai_model.Response, task model.Task) error {
 	return nil
 }
 
+func SLowSpeed(c *gin.Context) {
+	form := request.SlowTask{}
+	err := c.ShouldBind(&form)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	var inputImage model.InputImage
+	err = mysql.DB.Model(&model.InputImage{}).Where("id = ?", form.ImageId).First(&inputImage).Error
+	if err != nil {
+		logs.Logger.Err(err)
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	h := TaskHandler{inputImage: &inputImage}
+	err = h.run(&form)
+
+	if err != nil {
+		logs.Logger.Err(err)
+		c.JSON(http.StatusInternalServerError, response.InternalError)
+		return
+	}
+	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
+}
+
 func FastSpeed(c *gin.Context) {
 	form := request.FastSpeed{}
 	err := c.ShouldBind(&form)
@@ -187,4 +208,20 @@ func FastSpeed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
+	var inputImage model.InputImage
+	err = mysql.DB.Model(&model.InputImage{}).Where("id = ?", form.ImageId).First(&inputImage).Error
+	if err != nil {
+		logs.Logger.Err(err)
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	h := TaskHandler{inputImage: &inputImage}
+	err = h.run(&form)
+
+	if err != nil {
+		logs.Logger.Err(err)
+		c.JSON(http.StatusInternalServerError, response.InternalError)
+		return
+	}
+	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
 }
