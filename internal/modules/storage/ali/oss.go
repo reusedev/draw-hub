@@ -10,7 +10,7 @@ import (
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/tools"
 	"io"
-	"strings"
+	"path/filepath"
 	"time"
 )
 
@@ -43,11 +43,8 @@ func InitOSS(config config.AliOss) {
 }
 
 func (o *ossClient) UploadFileWithName(fName string, file io.Reader) (string, error) {
-	parts := strings.Split(fName, ".")
-	if len(parts) < 2 {
-		return "", fmt.Errorf("file name %s is invalid", fName)
-	}
-	key := o.fullPath(uuid.New().String() + "." + parts[len(parts)-1])
+	ext := filepath.Ext(fName)
+	key := o.fullPath(uuid.New().String() + ext)
 	return key, o.upload(fName, key, file)
 }
 

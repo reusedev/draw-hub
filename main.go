@@ -8,6 +8,7 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/storage/ali"
 	"github.com/reusedev/draw-hub/internal/service/http"
 	"github.com/reusedev/draw-hub/internal/service/http/model"
+	"github.com/reusedev/draw-hub/tools"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,7 +26,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	config.Init(readF(configPath))
+	config.Init(tools.ReadFile(configPath))
 	logs.InitLogger()
 	mysql.CreateDataBase(config.GConfig.MySQL)
 	mysql.InitMySQL(config.GConfig.MySQL)
@@ -35,12 +36,4 @@ func main() {
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-}
-
-func readF(path string) []byte {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	return data
 }
