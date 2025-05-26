@@ -32,8 +32,11 @@ func main() {
 	mysql.InitMySQL(config.GConfig.MySQL)
 	mysql.DB.AutoMigrate(&model.InputImage{}, &model.OutputImage{}, &model.Task{}, &model.TaskImage{}, &model.SupplierInvokeHistory{})
 	ali.InitOSS(config.GConfig.AliOss)
+	osSignal := make(chan os.Signal, 1)
+	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	go func(ch chan os.Signal) {
+		<-ch
+		os.Exit(0)
+	}(osSignal)
 	http.Serve(httpPort)
-	quit := make(chan os.Signal)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
 }

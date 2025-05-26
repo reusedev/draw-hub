@@ -8,11 +8,9 @@ import (
 func Serve(port string) {
 	e := gin.New()
 	initRouter(e)
-	go func() {
-		if err := e.Run(port); err != nil {
-			panic(err)
-		}
-	}()
+	if err := e.Run(port); err != nil {
+		panic(err)
+	}
 }
 
 func initRouter(e *gin.Engine) {
