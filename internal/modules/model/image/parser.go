@@ -15,8 +15,8 @@ type Response interface {
 	DurationMs() int64
 
 	Succeed() bool
-	GetBase64() string // image1
-	GetURLs() []string // 4o-image
+	GetBase64() []string
+	GetURLs() []string
 }
 
 type Parser interface {

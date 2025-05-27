@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/base64"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/reusedev/draw-hub/config"
@@ -64,6 +63,7 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 	return nil
 }
 func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
+	now := time.Now()
 	taskRecord := model.Task{
 		TaskGroupId: form.GetGroupId(),
 		Type:        model.TaskTypeEdit.String(),
@@ -71,6 +71,8 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 		Status:      model.TaskStatusRunning.String(),
 		Quality:     form.GetQuality(),
 		Size:        form.GetSize(),
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 	err := mysql.DB.Model(&model.Task{}).Create(&taskRecord).Error
 	if err != nil {
@@ -124,60 +126,43 @@ func (h *TaskHandler) endWork(response []image.Response) error {
 			if err != nil {
 				return err
 			}
-			var imgBytes []byte
-			if v.GetModel() == consts.GPTImage1.String() {
-				b64 := v.GetBase64()
-				imgBytes, err = base64.StdEncoding.DecodeString(b64)
+			for _, supplierURL := range v.GetURLs() {
+				imgBytes, _, err := tools.GetOnlineImage(supplierURL)
 				if err != nil {
 					return err
 				}
-			} else if v.GetModel() == consts.GPT4oImage.String() || v.GetModel() == consts.GPT4oImageVip.String() {
-				URLs := v.GetURLs()
-				if len(URLs) == 0 {
-					return fmt.Errorf("no image URL found in response %s", v.FailedRespBody())
-				}
-				// todo 生成多张，保存多张
-				imgBytes, _, err = tools.GetOnlineImage(URLs[0])
+				key, err := ali.OssClient.UploadImage(imgBytes)
 				if err != nil {
 					return err
 				}
-			} else {
-				return fmt.Errorf("unknown model %s", v.GetModel())
-			}
-
-			key, err := ali.OssClient.UploadImage(imgBytes)
-			if err != nil {
-				return err
-			}
-			duration, _ := time.ParseDuration(config.GConfig.URLExpires)
-			url, err := ali.OssClient.URL(key, duration)
-			if err != nil {
-				return err
-			}
-			imageRecord := model.OutputImage{
-				StorageSupplierName: config.GConfig.StorageSupplier,
-				Key:                 key,
-				URL:                 url,
-				Type:                model.OuputImageTypeNormal.String(),
-				CompressionRatio:    decimal.NullDecimal{Valid: false},
-				ModelSupplierName:   v.GetSupplier(),
-				ModelName:           v.GetModel(),
-			}
-			if v.GetModel() == consts.GPT4oImageVip.String() || v.GetModel() == consts.GPT4oImage.String() {
-				imageRecord.OriginalURL = v.GetURLs()[0]
-			}
-			err = mysql.DB.Model(&model.OutputImage{}).Create(&imageRecord).Error
-			if err != nil {
-				return err
-			}
-			taskImageRecord := model.TaskImage{
-				TaskId:  taskRecord.Id,
-				ImageId: imageRecord.Id,
-				Type:    model.TaskImageTypeOutput.String(),
-			}
-			err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
-			if err != nil {
-				return err
+				duration, _ := time.ParseDuration(config.GConfig.URLExpires)
+				url, err := ali.OssClient.URL(key, duration)
+				if err != nil {
+					return err
+				}
+				imageRecord := model.OutputImage{
+					StorageSupplierName: config.GConfig.StorageSupplier,
+					Key:                 key,
+					URL:                 url,
+					Type:                model.OuputImageTypeNormal.String(),
+					CompressionRatio:    decimal.NullDecimal{Valid: false},
+					OriginalURL:         supplierURL,
+					ModelSupplierName:   v.GetSupplier(),
+					ModelName:           v.GetModel(),
+				}
+				err = mysql.DB.Model(&model.OutputImage{}).Create(&imageRecord).Error
+				if err != nil {
+					return err
+				}
+				taskImageRecord := model.TaskImage{
+					TaskId:  taskRecord.Id,
+					ImageId: imageRecord.Id,
+					Type:    model.TaskImageTypeOutput.String(),
+				}
+				err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
+				if err != nil {
+					return err
+				}
 			}
 			// todo 保存压缩图片
 		}
@@ -210,6 +195,16 @@ func (h *TaskHandler) list(groupId, id string) ([]model.Task, error) {
 	err := query.Find(&tasks).Error
 	if err != nil {
 		return nil, err
+	}
+	for t := range tasks {
+		for i := range tasks[t].TaskImages {
+			if tasks[t].TaskImages[i].Type == model.TaskImageTypeInput.String() {
+				tasks[t].TaskImages[i].OutputImage = model.OutputImage{}
+			}
+			if tasks[t].TaskImages[i].Type == model.TaskImageTypeOutput.String() {
+				tasks[t].TaskImages[i].InputImage = model.InputImage{}
+			}
+		}
 	}
 	return tasks, nil
 }

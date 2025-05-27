@@ -64,7 +64,7 @@ func (g *Image4oRequest) InitResponse(supplier string, duration time.Duration, t
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
 		Duration:  duration,
-		URLs:      make([]string, 0),
+		URLs:      []string{},
 	}
 	if g.Vip {
 		ret.Model = consts.GPT4oImageVip.String()
@@ -137,10 +137,12 @@ func (g *Image1Request) Path() string {
 	return "v1/images/edits"
 }
 func (g *Image1Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
-	ret := &GPTImage1Response{
+	ret := &Image1Response{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
 		Duration:  duration,
+		Base64:    []string{},
+		URLs:      []string{},
 	}
 	ret.Model = consts.GPTImage1.String()
 	return ret
