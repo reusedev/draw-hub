@@ -1,4 +1,4 @@
-package ai_model
+package image
 
 import (
 	"github.com/reusedev/draw-hub/internal/consts"

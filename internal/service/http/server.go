@@ -22,6 +22,10 @@ func initRouter(e *gin.Engine) {
 		task.POST("/fast", handler.FastSpeed)
 		task.GET("", handler.TaskQuery)
 	}
+	chat := v1.Group("/chat")
+	{
+		chat.POST("/completions", handler.ChatCompletions)
+	}
 
 	file := v1.Group("/images")
 	{

@@ -1,8 +1,8 @@
-package image
+package gpt
 
 import (
 	jsoniter "github.com/json-iterator/go"
-	"github.com/reusedev/draw-hub/internal/modules/ai_model"
+	"github.com/reusedev/draw-hub/internal/modules/model/image"
 	"io"
 	"net/http"
 	"regexp"
@@ -10,37 +10,39 @@ import (
 	"time"
 )
 
-type GPT4oImageParser struct{}
+type Image4oParser struct{}
 
-func (g *GPT4oImageParser) Parse(resp *http.Response, response ai_model.Response) error {
-	response.(*GPT4oImageResponse).StatusCode = resp.StatusCode
+func (g *Image4oParser) Parse(resp *http.Response, response image.Response) error {
+	realResp := response.(*Image4oResponse)
+	realResp.StatusCode = resp.StatusCode
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	response.(*GPT4oImageResponse).RespBody = string(body)
-	response.(*GPT4oImageResponse).RespAt = time.Now()
+	realResp.RespBody = string(body)
+	realResp.RespAt = time.Now()
 	reg := `]\((https?[^)]+)\)`
 	pattern, _ := regexp.Compile(reg)
 	matches := pattern.FindAllStringSubmatch(string(body), -1)
 	if len(matches) > 0 && len(matches[len(matches)-1]) >= 2 {
 		url := matches[len(matches)-1][1]
 		url = strings.ReplaceAll(url, "\\u0026", "&")
-		response.(*GPT4oImageResponse).URLs = append(response.(*GPT4oImageResponse).URLs, url)
+		realResp.URLs = append(realResp.URLs, url)
 	}
 	return nil
 }
 
-type GPTImage1Parser struct{}
+type Image1Parser struct{}
 
-func (g *GPTImage1Parser) Parse(resp *http.Response, response ai_model.Response) error {
-	response.(*GPTImage1Response).StatusCode = resp.StatusCode
+func (g *Image1Parser) Parse(resp *http.Response, response image.Response) error {
+	realResp := response.(*GPTImage1Response)
+	realResp.StatusCode = resp.StatusCode
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	response.(*GPTImage1Response).RespBody = string(body)
-	response.(*GPTImage1Response).RespAt = time.Now()
+	realResp.RespBody = string(body)
+	realResp.RespAt = time.Now()
 	var s struct {
 		Data []struct {
 			B64Json string `json:"b64_json"`
@@ -51,12 +53,12 @@ func (g *GPTImage1Parser) Parse(resp *http.Response, response ai_model.Response)
 		return err
 	}
 	if len(s.Data) > 0 && len(s.Data[0].B64Json) != 0 {
-		response.(*GPTImage1Response).Base64 = s.Data[0].B64Json
+		realResp.Base64 = s.Data[0].B64Json
 	}
 	return nil
 }
 
-type GPT4oImageResponse struct {
+type Image4oResponse struct {
 	Supplier   string        `json:"supplier"`
 	TokenDesc  string        `json:"token_desc"`
 	Model      string        `json:"model"`
@@ -67,37 +69,37 @@ type GPT4oImageResponse struct {
 	URLs       []string      `json:"URLs"`
 }
 
-func (r *GPT4oImageResponse) GetSupplier() string {
+func (r *Image4oResponse) GetSupplier() string {
 	return r.Supplier
 }
-func (r *GPT4oImageResponse) GetTokenDesc() string {
+func (r *Image4oResponse) GetTokenDesc() string {
 	return r.TokenDesc
 }
-func (r *GPT4oImageResponse) GetModel() string {
+func (r *Image4oResponse) GetModel() string {
 	return r.Model
 }
-func (r *GPT4oImageResponse) GetStatusCode() int {
+func (r *Image4oResponse) GetStatusCode() int {
 	return r.StatusCode
 }
-func (r *GPT4oImageResponse) GetRespAt() time.Time {
+func (r *Image4oResponse) GetRespAt() time.Time {
 	return r.RespAt
 }
-func (r *GPT4oImageResponse) FailedRespBody() string {
+func (r *Image4oResponse) FailedRespBody() string {
 	if r.StatusCode != http.StatusOK {
 		return r.RespBody
 	}
 	return ""
 }
-func (r *GPT4oImageResponse) DurationMs() int64 {
+func (r *Image4oResponse) DurationMs() int64 {
 	return r.Duration.Milliseconds()
 }
-func (r *GPT4oImageResponse) Succeed() bool {
+func (r *Image4oResponse) Succeed() bool {
 	return len(r.URLs) != 0
 }
-func (r *GPT4oImageResponse) GetURLs() []string {
+func (r *Image4oResponse) GetURLs() []string {
 	return r.URLs
 }
-func (r *GPT4oImageResponse) GetBase64() string {
+func (r *Image4oResponse) GetBase64() string {
 	return ""
 }
 

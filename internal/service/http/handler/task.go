@@ -7,9 +7,9 @@ import (
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/components/mysql"
 	"github.com/reusedev/draw-hub/internal/consts"
-	"github.com/reusedev/draw-hub/internal/modules/ai_model"
-	"github.com/reusedev/draw-hub/internal/modules/ai_model/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
+	"github.com/reusedev/draw-hub/internal/modules/model/image"
+	"github.com/reusedev/draw-hub/internal/modules/model/image/gpt"
 	"github.com/reusedev/draw-hub/internal/modules/storage/ali"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
@@ -38,23 +38,23 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 	}
 	go func() {
 		if h.speed == consts.SlowSpeed {
-			editRequest := image.SlowRequest{
+			editRequest := gpt.SlowRequest{
 				ImageURL: imageURL,
 				Prompt:   form.GetPrompt(),
 			}
-			editResponse := image.SlowSpeed(editRequest)
+			editResponse := gpt.SlowSpeed(editRequest)
 			err = h.endWork(editResponse)
 			if err != nil {
 				logs.Logger.Err(err)
 			}
 		} else if h.speed == consts.FastSpeed {
-			editRequest := image.FastRequest{
+			editRequest := gpt.FastRequest{
 				ImageURLs: []string{imageURL},
 				Prompt:    form.GetPrompt(),
 				Quality:   form.GetQuality(),
 				Size:      form.GetSize(),
 			}
-			editResponse := image.FastSpeed(editRequest)
+			editResponse := gpt.FastSpeed(editRequest)
 			err = h.endWork(editResponse)
 			if err != nil {
 				logs.Logger.Err(err)
@@ -89,7 +89,7 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 	h.taskImage = &taskImageRecord
 	return nil
 }
-func (h *TaskHandler) endWork(response []ai_model.Response) error {
+func (h *TaskHandler) endWork(response []image.Response) error {
 	for _, v := range response {
 		exeRecord := model.SupplierInvokeHistory{
 			TaskId:         h.task.Id,

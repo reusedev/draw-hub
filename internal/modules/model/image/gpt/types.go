@@ -1,4 +1,4 @@
-package image
+package gpt
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/reusedev/draw-hub/internal/consts"
-	"github.com/reusedev/draw-hub/internal/modules/ai_model"
+	"github.com/reusedev/draw-hub/internal/modules/model/image"
 	"github.com/reusedev/draw-hub/tools"
 	"io"
 	"mime/multipart"
@@ -16,13 +16,13 @@ import (
 	"time"
 )
 
-type GPT4oImageRequest struct {
+type Image4oRequest struct {
 	Vip      bool   `json:"vip"`
 	ImageURL string `json:"image_url"`
 	Prompt   string `json:"prompt"`
 }
 
-func (g *GPT4oImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
+func (g *Image4oRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
 	imageBytes, _, err := tools.GetOnlineImage(g.ImageURL)
 	if err != nil {
 		return nil, "", err
@@ -56,11 +56,11 @@ func (g *GPT4oImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.R
 	}
 	return bytes.NewBuffer(data), "application/json", nil
 }
-func (g *GPT4oImageRequest) Path() string {
+func (g *Image4oRequest) Path() string {
 	return "v1/chat/completions"
 }
-func (g *GPT4oImageRequest) InitResponse(supplier string, duration time.Duration, tokenDesc string) ai_model.Response {
-	ret := &GPT4oImageResponse{
+func (g *Image4oRequest) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
+	ret := &Image4oResponse{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
 		Duration:  duration,
@@ -74,14 +74,14 @@ func (g *GPT4oImageRequest) InitResponse(supplier string, duration time.Duration
 	return ret
 }
 
-type GPTImage1Request struct {
+type Image1Request struct {
 	ImageURLs []string `json:"image_urls"`
 	Prompt    string   `json:"prompt"`
 	Quality   string   `json:"quality"`
 	Size      string   `json:"size"`
 }
 
-func (g *GPTImage1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
+func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
 	if supplier == consts.Geek {
 		body := map[string]interface{}{}
 		body["model"] = "gpt-image-1"
@@ -133,10 +133,10 @@ func (g *GPTImage1Request) BodyContentType(supplier consts.ModelSupplier) (io.Re
 		return payload, writer.FormDataContentType(), nil
 	}
 }
-func (g *GPTImage1Request) Path() string {
+func (g *Image1Request) Path() string {
 	return "v1/images/edits"
 }
-func (g *GPTImage1Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) ai_model.Response {
+func (g *Image1Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
 	ret := &GPTImage1Response{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,

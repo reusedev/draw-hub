@@ -30,7 +30,7 @@ mysql:
 # 2. 如果极客智坊的低价接口失败，再访问均衡接口
 # ...
 request_order:
-# 低速接口请求顺序(调用gpt-4o-image、gpt-4o-image-vip)
+  # 低速接口请求顺序(调用gpt-4o-image、gpt-4o-image-vip)
   slow_speed:
     -
       supplier: "tuzi"
@@ -84,3 +84,13 @@ request_order:
       token: "sk-"
       desc: "openai_channel"
       model: "gpt-image-1"
+  # grok deepsearch
+  deepsearch:
+    - supplier: "geek"
+      token: "sk-"
+      desc: "low_price"
+      model: "grok-3-deepsearch"
+    - supplier: "tuzi"
+      token: "sk-"
+      desc: "default"
+      model: "grok-3-deepsearch"

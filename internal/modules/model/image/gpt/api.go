@@ -1,10 +1,10 @@
-package image
+package gpt
 
 import (
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/consts"
-	"github.com/reusedev/draw-hub/internal/modules/ai_model"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
+	"github.com/reusedev/draw-hub/internal/modules/model/image"
 )
 
 type FastRequest struct {
@@ -19,17 +19,17 @@ type SlowRequest struct {
 	Prompt   string `json:"prompt"`
 }
 
-func SlowSpeed(request SlowRequest) []ai_model.Response {
-	ret := make([]ai_model.Response, 0)
+func SlowSpeed(request SlowRequest) []image.Response {
+	ret := make([]image.Response, 0)
 	for _, order := range config.GConfig.RequestOrder.SlowSpeed {
-		content := GPT4oImageRequest{
+		content := Image4oRequest{
 			ImageURL: request.ImageURL,
 			Prompt:   request.Prompt,
 		}
 		if order.Model == consts.GPT4oImageVip.String() {
 			content.Vip = true
 		}
-		requester := ai_model.NewRequester(consts.ModelSupplier(order.Supplier), ai_model.Token{Token: order.Token, Desc: order.Desc}, &content, &GPT4oImageParser{})
+		requester := image.NewRequester(image.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, &Image4oParser{})
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err)
@@ -43,16 +43,16 @@ func SlowSpeed(request SlowRequest) []ai_model.Response {
 	return ret
 }
 
-func FastSpeed(request FastRequest) []ai_model.Response {
-	ret := make([]ai_model.Response, 0)
+func FastSpeed(request FastRequest) []image.Response {
+	ret := make([]image.Response, 0)
 	for _, order := range config.GConfig.RequestOrder.FastSpeed {
-		content := GPTImage1Request{
+		content := Image1Request{
 			ImageURLs: request.ImageURLs,
 			Prompt:    request.Prompt,
 			Quality:   request.Quality,
 			Size:      request.Size,
 		}
-		requester := ai_model.NewRequester(consts.ModelSupplier(order.Supplier), ai_model.Token{Token: order.Token, Desc: order.Desc}, &content, &GPTImage1Parser{})
+		requester := image.NewRequester(image.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, &Image1Parser{})
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err)

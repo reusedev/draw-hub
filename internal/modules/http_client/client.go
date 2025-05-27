@@ -1,4 +1,4 @@
-package ai_model
+package http_client
 
 import (
 	"bytes"
@@ -7,37 +7,37 @@ import (
 	"net/http"
 )
 
-type httpClient struct {
+type HttpClient struct {
 	HttpClient *http.Client
 }
 
-type requestOption func(options *requestOptions)
+type RequestOption func(options *RequestOptions)
 
-type requestOptions struct {
+type RequestOptions struct {
 	body   any
 	header http.Header
 }
 
-func withBody(body any) requestOption {
-	return func(c *requestOptions) {
+func WithBody(body any) RequestOption {
+	return func(c *RequestOptions) {
 		c.body = body
 	}
 }
 
-func withHeader(key, value string) requestOption {
-	return func(c *requestOptions) {
+func WithHeader(key, value string) RequestOption {
+	return func(c *RequestOptions) {
 		c.header.Set(key, value)
 	}
 }
 
-func newHttpClient() *httpClient {
-	return &httpClient{
+func New() *HttpClient {
+	return &HttpClient{
 		HttpClient: http.DefaultClient,
 	}
 }
 
-func (c *httpClient) newRequest(method string, url string, option ...requestOption) (*http.Request, error) {
-	options := &requestOptions{header: http.Header{}}
+func (c *HttpClient) NewRequest(method string, url string, option ...RequestOption) (*http.Request, error) {
+	options := &RequestOptions{header: http.Header{}}
 	for _, opt := range option {
 		opt(options)
 	}
@@ -64,6 +64,6 @@ func (c *httpClient) newRequest(method string, url string, option ...requestOpti
 	return req, nil
 }
 
-func (c *httpClient) do(req *http.Request) (*http.Response, error) {
+func (c *HttpClient) Do(req *http.Request) (*http.Response, error) {
 	return c.HttpClient.Do(req)
 }
