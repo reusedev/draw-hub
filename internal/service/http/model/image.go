@@ -10,6 +10,8 @@ type InputImage struct {
 	Path                string    `json:"path" gorm:"column:path;type:varchar(255)"`
 	StorageSupplierName string    `json:"storage_supplier_name" gorm:"column:storage_supplier_name;type:varchar(20)"`
 	Key                 string    `json:"key" gorm:"column:key;type:varchar(100)"`
+	ACL                 string    `json:"acl" gorm:"column:acl;type:varchar(20)"`
+	TTL                 int       `json:"ttl" gorm:"column:ttl;type:int;default:0"` // Time to live in days
 	URL                 string    `json:"url" gorm:"column:url;type:varchar(500)"`
 	CreatedAt           time.Time `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
 }
@@ -23,6 +25,8 @@ type OutputImage struct {
 	Path                string              `json:"path" gorm:"column:path;type:varchar(255)"`
 	StorageSupplierName string              `json:"storage_supplier_name" gorm:"column:storage_supplier_name;type:varchar(20)"`
 	Key                 string              `json:"key" gorm:"column:key;type:varchar(100)"`
+	ACL                 string              `json:"acl" gorm:"column:acl;type:varchar(20)"`
+	TTL                 int                 `json:"ttl" gorm:"column:ttl;type:int;default:0"` // Time to live in days
 	URL                 string              `json:"url" gorm:"column:url;type:varchar(500)"`
 	Type                string              `json:"type" gorm:"column:type;type:enum('normal', 'compressed')"`
 	CompressionRatio    decimal.NullDecimal `json:"compression_ratio" gorm:"column:compression_ratio;type:decimal(5,2)"`

@@ -30,5 +30,6 @@ func initRouter(e *gin.Engine) {
 	file := v1.Group("/images")
 	{
 		file.POST("", handler.UploadImage)
+		file.GET("", handler.GetImage)
 	}
 }

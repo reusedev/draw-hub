@@ -143,6 +143,8 @@ func (h *TaskHandler) endWork(response []image.Response) error {
 				imageRecord := model.OutputImage{
 					StorageSupplierName: config.GConfig.StorageSupplier,
 					Key:                 key,
+					ACL:                 "private",
+					TTL:                 0,
 					URL:                 url,
 					Type:                model.OuputImageTypeNormal.String(),
 					CompressionRatio:    decimal.NullDecimal{Valid: false},
