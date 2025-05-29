@@ -1,4 +1,12 @@
 ######## 文件存储服务 ########
+# samba文件服务器
+samba:
+  server: "127.0.0.1"
+  port: "445"
+  username: "draw-hub-admin"
+  password: "admin"
+  share_name: "draw-hub"
+# 云供应商文件存储
 storage_enabled: true
 storage_supplier: "ali_oss"
 url_expires: "168h"
