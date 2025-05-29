@@ -2,6 +2,7 @@ package tools
 
 import (
 	draw_hub "github.com/reusedev/draw-hub/internal/consts"
+	"strings"
 )
 
 func BaseURLBySupplier(supplier draw_hub.ModelSupplier) string {
@@ -21,14 +22,5 @@ func FullURL(baseURL, path string) string {
 	if baseURL == "" {
 		return ""
 	}
-	if baseURL[len(baseURL)-1] == '/' {
-		baseURL = baseURL[:len(baseURL)-1]
-	}
-	if path == "" {
-		return baseURL
-	}
-	if path[0] == '/' {
-		path = path[1:]
-	}
-	return baseURL + "/" + path
+	return strings.TrimSuffix(baseURL, "/") + "/" + strings.TrimPrefix(path, "/")
 }
