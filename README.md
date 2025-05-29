@@ -39,3 +39,8 @@ go mod download
 # 运行
 go run main.go
 ```
+### Docker 运行
+```shell
+docker build -t draw-hub .
+docker run -d -p 80:80 -v /path/to/config.yml:/app/config.yml draw-hub
+```
