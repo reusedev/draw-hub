@@ -32,7 +32,7 @@ type UploadRequest struct {
 	Acl       string        `json:"acl"`
 	URLExpire time.Duration `json:"url_expire,omitempty"`
 }
-type UploadResponse struct {
+type OSSObject struct {
 	Key       string     `json:"key"`
 	URL       string     `json:"url"`
 	URLExpire *time.Time `json:"url_expire,omitempty"`
@@ -63,8 +63,8 @@ func (o *ossClient) validACL(acl string) bool {
 	return true
 }
 
-func (o *ossClient) UploadFile(request *UploadRequest) (UploadResponse, error) {
-	ret := UploadResponse{}
+func (o *ossClient) UploadFile(request *UploadRequest) (OSSObject, error) {
+	ret := OSSObject{}
 	ext := filepath.Ext(request.Filename)
 	key := o.fullPath(uuid.New().String() + ext)
 
@@ -81,7 +81,7 @@ func (o *ossClient) UploadFile(request *UploadRequest) (UploadResponse, error) {
 	if request.URLExpire <= 0 {
 		request.URLExpire = time.Hour * 24 * 7 // default 7 days
 	}
-	presignRet, err := o.presign(key, request.URLExpire)
+	presignRet, err := o.Presign(key, request.URLExpire)
 	if err != nil {
 		return ret, err
 	}
@@ -90,14 +90,14 @@ func (o *ossClient) UploadFile(request *UploadRequest) (UploadResponse, error) {
 	return ret, nil
 }
 
-func (o *ossClient) UploadImage(b []byte) (string, error) {
+func (o *ossClient) UploadPrivateImage(b []byte) (string, error) {
 	fName := uuid.New().String() + "." + tools.DetectImageType(b)
 	key := o.fullPath(fName)
 	return key, o.upload(fName, key, string(oss.ObjectACLPrivate), bytes.NewReader(b))
 }
 
 func (o *ossClient) URL(key string, expire time.Duration) (string, error) {
-	presignResult, err := o.presign(key, expire)
+	presignResult, err := o.Presign(key, expire)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +108,7 @@ func (o *ossClient) fullPath(fName string) string {
 	return o.directory + fName
 }
 
-func (o *ossClient) presign(key string, expire time.Duration) (*oss.PresignResult, error) {
+func (o *ossClient) Presign(key string, expire time.Duration) (*oss.PresignResult, error) {
 	request := &oss.GetObjectRequest{
 		Bucket: oss.Ptr(o.bucketName),
 		Key:    oss.Ptr(key),

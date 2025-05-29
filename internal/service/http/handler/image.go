@@ -10,6 +10,7 @@ import (
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
 	"github.com/reusedev/draw-hub/internal/service/http/model"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -65,7 +66,7 @@ func GetImage(c *gin.Context) {
 		return
 	}
 	req.FullWithDefault()
-	var key, acl, url string
+	var key, acl, url, supplierURL string
 	if req.Type == "input" {
 		var inputImage model.InputImage
 		err = mysql.DB.Where("id = ?", req.ID).First(&inputImage).Error
@@ -86,6 +87,9 @@ func GetImage(c *gin.Context) {
 		key = outputImage.Key
 		acl = outputImage.ACL
 		url = outputImage.URL
+		if strings.HasSuffix(outputImage.ModelSupplierURL, ".png") {
+			supplierURL = outputImage.ModelSupplierURL
+		}
 	}
 	if acl == "private" {
 		d, _ := time.ParseDuration(req.Expire)
@@ -94,6 +98,10 @@ func GetImage(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, response.InternalError)
 			return
 		}
+	}
+	if supplierURL != "" {
+		c.JSON(http.StatusOK, response.SuccessWithData(map[string]string{"url": supplierURL}))
+		return
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(map[string]string{"url": url}))
 }

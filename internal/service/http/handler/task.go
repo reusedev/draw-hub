@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/reusedev/draw-hub/config"
@@ -14,16 +15,16 @@ import (
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
 	"github.com/reusedev/draw-hub/internal/service/http/model"
 	"github.com/reusedev/draw-hub/tools"
-	"github.com/shopspring/decimal"
 	"net/http"
 	"time"
 )
 
 type TaskHandler struct {
-	speed      consts.TaskSpeed
-	inputImage *model.InputImage
-	task       *model.Task
-	taskImage  *model.TaskImage
+	speed         consts.TaskSpeed
+	inputImage    *model.InputImage
+	task          *model.Task
+	taskImage     *model.TaskImage
+	imageResponse []image.Response
 }
 
 func (h *TaskHandler) run(form request.TaskForm) error {
@@ -41,8 +42,8 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 				ImageURL: imageURL,
 				Prompt:   form.GetPrompt(),
 			}
-			editResponse := gpt.SlowSpeed(editRequest)
-			err = h.endWork(editResponse)
+			h.imageResponse = gpt.SlowSpeed(editRequest)
+			err = h.endWork()
 			if err != nil {
 				logs.Logger.Err(err)
 			}
@@ -53,8 +54,8 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 				Quality:   form.GetQuality(),
 				Size:      form.GetSize(),
 			}
-			editResponse := gpt.FastSpeed(editRequest)
-			err = h.endWork(editResponse)
+			h.imageResponse = gpt.FastSpeed(editRequest)
+			err = h.endWork()
 			if err != nil {
 				logs.Logger.Err(err)
 			}
@@ -91,8 +92,88 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 	h.taskImage = &taskImageRecord
 	return nil
 }
-func (h *TaskHandler) endWork(response []image.Response) error {
-	for _, v := range response {
+func (h *TaskHandler) createImageRecords(imageResp image.Response) error {
+	err := h.createNormalRecords(imageResp)
+	if err != nil {
+		return err
+	}
+	err = h.createCompressionRecords(imageResp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
+	for _, v := range imageResp.GetURLs() {
+		normal, err := uploadNormalImage(v)
+		if err != nil {
+			return err
+		}
+		imageRecord := model.OutputImage{
+			StorageSupplierName: config.GConfig.StorageSupplier,
+			Key:                 normal.Key,
+			ACL:                 "private",
+			TTL:                 0,
+			URL:                 normal.URL,
+			Type:                string(model.OuputImageTypeNormal),
+			ModelSupplierURL:    v,
+			ModelSupplierName:   imageResp.GetSupplier(),
+			ModelName:           imageResp.GetModel(),
+		}
+		err = mysql.DB.Model(&model.OutputImage{}).Create(&imageRecord).Error
+		if err != nil {
+			return err
+		}
+		taskImageRecord := model.TaskImage{
+			TaskId:  h.task.Id,
+			ImageId: imageRecord.Id,
+			Type:    model.TaskImageTypeOutput.String(),
+		}
+		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
+	for _, v := range imageResp.GetURLs() {
+		compression, ratio, err := uploadCompressionImage(v, 95)
+		if err != nil {
+			return err
+		}
+		imageRecord := model.OutputImage{
+			StorageSupplierName: config.GConfig.StorageSupplier,
+			Key:                 compression.Key,
+			ACL:                 "private",
+			TTL:                 0,
+			URL:                 compression.URL,
+			Type:                string(model.OuputImageTypeCompressed),
+			CompressionRatio:    sql.NullFloat64{Valid: true, Float64: ratio},
+			ModelSupplierURL:    v,
+			ModelSupplierName:   imageResp.GetSupplier(),
+			ModelName:           imageResp.GetModel(),
+		}
+		err = mysql.DB.Model(&model.OutputImage{}).Create(&imageRecord).Error
+		if err != nil {
+			return err
+		}
+		taskImageRecord := model.TaskImage{
+			TaskId:  h.task.Id,
+			ImageId: imageRecord.Id,
+			Type:    model.TaskImageTypeOutput.String(),
+		}
+		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (h *TaskHandler) endWork() error {
+	for _, v := range h.imageResponse {
 		exeRecord := model.SupplierInvokeHistory{
 			TaskId:         h.task.Id,
 			SupplierName:   v.GetSupplier(),
@@ -110,10 +191,10 @@ func (h *TaskHandler) endWork(response []image.Response) error {
 	}
 
 	var succeed bool
-	for i, v := range response {
+	for i, v := range h.imageResponse {
 		if v.Succeed() {
 			succeed = true
-			if i != len(response)-1 {
+			if i != len(h.imageResponse)-1 {
 				return fmt.Errorf("not the last response, but succeed. task_id: %d", h.task.Id)
 			}
 			taskRecord := model.Task{
@@ -126,47 +207,10 @@ func (h *TaskHandler) endWork(response []image.Response) error {
 			if err != nil {
 				return err
 			}
-			for _, supplierURL := range v.GetURLs() {
-				imgBytes, _, err := tools.GetOnlineImage(supplierURL)
-				if err != nil {
-					return err
-				}
-				key, err := ali.OssClient.UploadImage(imgBytes)
-				if err != nil {
-					return err
-				}
-				duration, _ := time.ParseDuration(config.GConfig.URLExpires)
-				url, err := ali.OssClient.URL(key, duration)
-				if err != nil {
-					return err
-				}
-				imageRecord := model.OutputImage{
-					StorageSupplierName: config.GConfig.StorageSupplier,
-					Key:                 key,
-					ACL:                 "private",
-					TTL:                 0,
-					URL:                 url,
-					Type:                model.OuputImageTypeNormal.String(),
-					CompressionRatio:    decimal.NullDecimal{Valid: false},
-					OriginalURL:         supplierURL,
-					ModelSupplierName:   v.GetSupplier(),
-					ModelName:           v.GetModel(),
-				}
-				err = mysql.DB.Model(&model.OutputImage{}).Create(&imageRecord).Error
-				if err != nil {
-					return err
-				}
-				taskImageRecord := model.TaskImage{
-					TaskId:  taskRecord.Id,
-					ImageId: imageRecord.Id,
-					Type:    model.TaskImageTypeOutput.String(),
-				}
-				err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
-				if err != nil {
-					return err
-				}
+			err = h.createImageRecords(v)
+			if err != nil {
+				return err
 			}
-			// todo 保存压缩图片
 		}
 	}
 	// todo 总结失败原因
@@ -272,4 +316,51 @@ func TaskQuery(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(tasks))
+}
+
+func uploadNormalImage(supplierURL string) (normal ali.OSSObject, err error) {
+	bytes, _, err := tools.GetOnlineImage(supplierURL)
+	if err != nil {
+		return
+	}
+	key, err := ali.OssClient.UploadPrivateImage(bytes)
+	if err != nil {
+		return
+	}
+	// 配置初始化时已校验
+	duration, _ := time.ParseDuration(config.GConfig.URLExpires)
+	presignRet, err := ali.OssClient.Presign(key, duration)
+	if err != nil {
+		return
+	}
+	normal.URLExpire = &presignRet.Expiration
+	normal.URL = presignRet.URL
+	normal.Key = key
+	return
+}
+
+func uploadCompressionImage(supplierURL string, quality int) (compression ali.OSSObject, ratio float64, err error) {
+	bytes, _, err := tools.GetOnlineImage(supplierURL)
+	if err != nil {
+		return
+	}
+	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(bytes, quality)
+	if err != nil {
+		return
+	}
+	ratio = float64(len(compressionBytes)) / float64(len(bytes))
+	key, err := ali.OssClient.UploadPrivateImage(compressionBytes)
+	if err != nil {
+		return
+	}
+	// 配置初始化时已校验
+	duration, _ := time.ParseDuration(config.GConfig.URLExpires)
+	presignRet, err := ali.OssClient.Presign(key, duration)
+	if err != nil {
+		return
+	}
+	compression.URLExpire = &presignRet.Expiration
+	compression.URL = presignRet.URL
+	compression.Key = key
+	return
 }
