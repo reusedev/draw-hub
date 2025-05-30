@@ -45,7 +45,7 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 			h.imageResponse = gpt.SlowSpeed(editRequest)
 			err = h.endWork()
 			if err != nil {
-				logs.Logger.Err(err)
+				logs.Logger.Err(err).Msg("task-SlowSpeed")
 			}
 		} else if h.speed == consts.FastSpeed {
 			editRequest := gpt.FastRequest{
@@ -57,7 +57,7 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 			h.imageResponse = gpt.FastSpeed(editRequest)
 			err = h.endWork()
 			if err != nil {
-				logs.Logger.Err(err)
+				logs.Logger.Err(err).Msg("task-FastSpeed")
 			}
 		}
 	}()
@@ -265,7 +265,7 @@ func SlowSpeed(c *gin.Context) {
 	var inputImage model.InputImage
 	err = mysql.DB.Model(&model.InputImage{}).Where("id = ?", form.ImageId).First(&inputImage).Error
 	if err != nil {
-		logs.Logger.Err(err)
+		logs.Logger.Err(err).Msg("task-SlowSpeed")
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
@@ -273,7 +273,7 @@ func SlowSpeed(c *gin.Context) {
 	err = h.run(&form)
 
 	if err != nil {
-		logs.Logger.Err(err)
+		logs.Logger.Err(err).Msg("task-SlowSpeed")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
@@ -290,7 +290,7 @@ func FastSpeed(c *gin.Context) {
 	var inputImage model.InputImage
 	err = mysql.DB.Model(&model.InputImage{}).Where("id = ?", form.ImageId).First(&inputImage).Error
 	if err != nil {
-		logs.Logger.Err(err)
+		logs.Logger.Err(err).Msg("task-FastSpeed")
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
@@ -298,7 +298,7 @@ func FastSpeed(c *gin.Context) {
 	err = h.run(&form)
 
 	if err != nil {
-		logs.Logger.Err(err)
+		logs.Logger.Err(err).Msg("task-FastSpeed")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
@@ -311,7 +311,7 @@ func TaskQuery(c *gin.Context) {
 	h := TaskHandler{}
 	tasks, err := h.list(groupId, id)
 	if err != nil {
-		logs.Logger.Err(err)
+		logs.Logger.Err(err).Msg("task-TaskQuery")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}

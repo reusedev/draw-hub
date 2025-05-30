@@ -3,6 +3,7 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/reusedev/draw-hub/internal/service/http/handler"
+	"github.com/reusedev/draw-hub/internal/service/http/middleware"
 )
 
 func Serve(port string) {
@@ -27,6 +28,7 @@ func Serve(port string) {
 
 func initRouter(e *gin.Engine) {
 	e.Use(gin.Recovery())
+	e.Use(middleware.RequestLogger())
 	v1 := e.Group("/v1")
 	task := v1.Group("/task")
 	{
