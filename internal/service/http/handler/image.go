@@ -2,17 +2,182 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/components/mysql"
-	"github.com/reusedev/draw-hub/internal/modules/logs"
+	"github.com/reusedev/draw-hub/internal/modules/dao"
 	"github.com/reusedev/draw-hub/internal/modules/storage/ali"
+	"github.com/reusedev/draw-hub/internal/modules/storage/local"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
 	"github.com/reusedev/draw-hub/internal/service/http/model"
 	"net/http"
-	"strings"
+	"path/filepath"
 	"time"
 )
+
+type StorageHandler struct {
+	inputImage  model.InputImage
+	outputImage model.OutputImage
+}
+
+func NewStorageHandler() *StorageHandler {
+	return &StorageHandler{}
+}
+func (s *StorageHandler) InputImage() model.InputImage {
+	return s.inputImage
+}
+func (s *StorageHandler) OutputImage() model.OutputImage {
+	return s.outputImage
+}
+func (s *StorageHandler) Upload(request request.UploadRequest) error {
+	s.initInputImage(request)
+	err := s.upload(request)
+	if err != nil {
+		return err
+	}
+	err = s.createInputImage()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (s *StorageHandler) Query(request request.GetImageRequest) (response.GetImage, error) {
+	err := s.selectImage(request)
+	if err != nil {
+		return response.GetImage{}, err
+	}
+	return s.getImageResponse(request)
+}
+
+func (s *StorageHandler) selectImage(request request.GetImageRequest) error {
+	if request.Type == "input" {
+		inputImage, err := dao.InputImageById(request.ID)
+		if err != nil {
+			return err
+		}
+		s.inputImage = inputImage
+	} else {
+		outputImage, err := dao.OutputImageById(request.ID)
+		if err != nil {
+			return err
+		}
+		s.outputImage = outputImage
+	}
+	return nil
+}
+func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (response.GetImage, error) {
+	var ret response.GetImage
+	var key, acl, url string
+	if request.Type == "input" {
+		ret.Path = s.inputImage.Path
+		key = s.inputImage.Key
+		acl = s.inputImage.ACL
+		url = s.inputImage.URL
+	} else {
+		ret.Path = s.outputImage.Path
+		key = s.outputImage.Key
+		acl = s.outputImage.ACL
+		url = s.outputImage.URL
+	}
+	if config.GConfig.CloudStorageEnabled {
+		if acl == "private" {
+			d, _ := time.ParseDuration(config.GConfig.URLExpires)
+			ossURL, err := ali.OssClient.URL(key, d)
+			if err != nil {
+				return ret, err
+			}
+			ret.URL = ossURL
+			return ret, nil
+		}
+		ret.URL = url
+		return ret, nil
+	}
+	return ret, nil
+}
+
+func (s *StorageHandler) initInputImage(request request.UploadRequest) {
+	s.inputImage.TTL = request.TTL
+	s.inputImage.Path = s.localStoragePath(request.File.Filename)
+	s.inputImage.CreatedAt = time.Now()
+	if config.GConfig.CloudStorageEnabled {
+		s.inputImage.Key = s.ossStorageKey(request.File.Filename)
+		s.inputImage.ACL = request.ACL
+		s.inputImage.StorageSupplierName = config.GConfig.CloudStorageSupplier
+	}
+}
+
+func (s *StorageHandler) upload(request request.UploadRequest) error {
+	err := s.localSave(request)
+	if err != nil {
+		return err
+	}
+	if config.GConfig.CloudStorageEnabled {
+		err = s.uploadToOSS(request)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *StorageHandler) uploadToOSS(request request.UploadRequest) error {
+	ossReq, err := s.transformToOssUpload(request)
+	if err != nil {
+		return err
+	}
+	ossObject, err := ali.OssClient.UploadFile(&ossReq)
+	if err != nil {
+		return err
+	}
+	s.inputImage.URL = ossObject.URL
+	return nil
+}
+func (s *StorageHandler) localSave(request request.UploadRequest) error {
+	f, err := request.File.Open()
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	err = local.SaveFile(f, s.inputImage.Path)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (s *StorageHandler) localStoragePath(filename string) string {
+	ext := filepath.Ext(filename)
+	path := config.GConfig.LocalStorageDirectory + uuid.New().String() + ext
+	return path
+}
+func (s *StorageHandler) ossStorageKey(filename string) string {
+	ext := filepath.Ext(filename)
+	key := config.GConfig.AliOss.Directory + uuid.New().String() + ext
+	return key
+}
+
+func (s *StorageHandler) createInputImage() error {
+	err := mysql.DB.Create(&s.inputImage).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *StorageHandler) transformToOssUpload(request request.UploadRequest) (ali.UploadRequest, error) {
+	f, err := request.File.Open()
+	if err != nil {
+		return ali.UploadRequest{}, err
+	}
+	urlExpire, _ := time.ParseDuration(config.GConfig.URLExpires)
+	ret := ali.UploadRequest{
+		Key:       s.inputImage.Key,
+		Filename:  request.File.Filename,
+		File:      f,
+		Acl:       s.inputImage.ACL,
+		URLExpire: urlExpire,
+	}
+	return ret, nil
+}
 
 func UploadImage(c *gin.Context) {
 	var req request.UploadRequest
@@ -26,32 +191,13 @@ func UploadImage(c *gin.Context) {
 		return
 	}
 	req.FullWithDefault()
-	uploadReq, err := req.TransformOSSUpload()
+	handler := NewStorageHandler()
+	err = handler.Upload(req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	resp, err := ali.OssClient.UploadFile(&uploadReq)
-	if err != nil {
-		logs.Logger.Err(err).Msg("image-UploadImage")
-		c.JSON(http.StatusInternalServerError, response.InternalError)
-		return
-	}
-	r := model.InputImage{
-		StorageSupplierName: config.GConfig.StorageSupplier,
-		Key:                 resp.Key,
-		ACL:                 req.ACL,
-		TTL:                 req.TTL,
-		URL:                 resp.URL,
-		CreatedAt:           time.Now(),
-	}
-	err = mysql.DB.Create(&r).Error
-	if err != nil {
-		logs.Logger.Err(err).Msg("image-UploadImage")
-		c.JSON(http.StatusInternalServerError, response.InternalError)
-		return
-	}
-	c.JSON(http.StatusOK, response.SuccessWithData(r))
+	c.JSON(http.StatusOK, response.SuccessWithData(handler.InputImage()))
 }
 
 func GetImage(c *gin.Context) {
@@ -66,42 +212,11 @@ func GetImage(c *gin.Context) {
 		return
 	}
 	req.FullWithDefault()
-	var key, acl, url, supplierURL string
-	if req.Type == "input" {
-		var inputImage model.InputImage
-		err = mysql.DB.Where("id = ?", req.ID).First(&inputImage).Error
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, response.InternalError)
-			return
-		}
-		key = inputImage.Key
-		acl = inputImage.ACL
-		url = inputImage.URL
-	} else {
-		var outputImage model.OutputImage
-		err = mysql.DB.Where("id = ?", req.ID).First(&outputImage).Error
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, response.InternalError)
-			return
-		}
-		key = outputImage.Key
-		acl = outputImage.ACL
-		url = outputImage.URL
-		if strings.HasSuffix(outputImage.ModelSupplierURL, ".png") {
-			supplierURL = outputImage.ModelSupplierURL
-		}
-	}
-	if acl == "private" {
-		d, _ := time.ParseDuration(req.Expire)
-		url, err = ali.OssClient.URL(key, d)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, response.InternalError)
-			return
-		}
-	}
-	if supplierURL != "" {
-		c.JSON(http.StatusOK, response.SuccessWithData(map[string]string{"url": supplierURL}))
+	handler := NewStorageHandler()
+	resp, err := handler.Query(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
-	c.JSON(http.StatusOK, response.SuccessWithData(map[string]string{"url": url}))
+	c.JSON(http.StatusOK, response.SuccessWithData(resp))
 }

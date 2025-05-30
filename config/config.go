@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"gopkg.in/yaml.v3"
+	"strings"
 	"time"
 )
 
@@ -25,21 +26,26 @@ func initFromYaml(config []byte) {
 }
 
 type Config struct {
-	StorageEnabled  bool   `yaml:"storage_enabled"`
-	StorageSupplier string `yaml:"storage_supplier"`
-	URLExpires      string `yaml:"url_expires"`
-	AliOss          `yaml:"ali_oss"`
-	MySQL           `yaml:"mysql"`
-	RequestOrder    `yaml:"request_order"`
+	LocalStorageDirectory string `yaml:"local_storage_directory"`
+	CloudStorageEnabled   bool   `yaml:"cloud_storage_enabled"`
+	CloudStorageSupplier  string `yaml:"cloud_storage_supplier"`
+	URLExpires            string `yaml:"url_expires"`
+	AliOss                `yaml:"ali_oss"`
+	MySQL                 `yaml:"mysql"`
+	RequestOrder          `yaml:"request_order"`
 }
 
 func (c *Config) Verify() error {
-	// todo 支持不转存
-	if !c.StorageEnabled {
-		return fmt.Errorf("storage_enabled must be true")
+	if !strings.HasSuffix(c.LocalStorageDirectory, "/") {
+		return fmt.Errorf("local_storage_directory must end with '/'")
 	}
-	if c.StorageSupplier != "ali_oss" {
-		return fmt.Errorf("storage_supplier must be ali_oss")
+	if c.CloudStorageEnabled {
+		if c.CloudStorageSupplier != "ali_oss" {
+			return fmt.Errorf("storage_supplier must be ali_oss")
+		}
+		if !strings.HasSuffix(c.AliOss.Directory, "/") {
+			return fmt.Errorf("ali_oss.directory must end with '/'")
+		}
 	}
 	_, err := time.ParseDuration(c.URLExpires)
 	if err != nil {

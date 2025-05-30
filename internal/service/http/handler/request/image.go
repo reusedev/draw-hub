@@ -2,7 +2,6 @@ package request
 
 import (
 	"fmt"
-	"github.com/reusedev/draw-hub/internal/modules/storage/ali"
 	"mime/multipart"
 	"time"
 )
@@ -41,22 +40,6 @@ func (u *UploadRequest) FullWithDefault() {
 	if u.Expire == "" {
 		u.Expire = "168h" // 默认 7 天
 	}
-}
-
-func (u *UploadRequest) TransformOSSUpload() (ali.UploadRequest, error) {
-	file, err := u.File.Open()
-	if err != nil {
-		return ali.UploadRequest{}, err
-	}
-	defer file.Close()
-	d, _ := time.ParseDuration(u.Expire)
-
-	return ali.UploadRequest{
-		Filename:  u.File.Filename,
-		File:      file,
-		Acl:       u.ACL,
-		URLExpire: d,
-	}, nil
 }
 
 type GetImageRequest struct {

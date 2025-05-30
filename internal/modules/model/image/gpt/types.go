@@ -17,15 +17,21 @@ import (
 )
 
 type Image4oRequest struct {
-	Vip      bool   `json:"vip"`
-	ImageURL string `json:"image_url"`
-	Prompt   string `json:"prompt"`
+	Vip       bool   `json:"vip"`
+	ImageURL  string `json:"image_url"` // URL Bytes 二选一
+	ImageByte []byte `json:"image_byte"`
+	Prompt    string `json:"prompt"`
 }
 
 func (g *Image4oRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
-	imageBytes, _, err := tools.GetOnlineImage(g.ImageURL)
-	if err != nil {
-		return nil, "", err
+	var imageByte []byte
+	imageByte = g.ImageByte
+	if len(imageByte) == 0 {
+		b, _, err := tools.GetOnlineImage(g.ImageURL)
+		if err != nil {
+			return nil, "", err
+		}
+		imageByte = b
 	}
 	body := make(map[string]any)
 	body["model"] = "gpt-4o-image"
@@ -44,7 +50,7 @@ func (g *Image4oRequest) BodyContentType(supplier consts.ModelSupplier) (io.Read
 				{
 					"type": "image_url",
 					"image_url": map[string]string{
-						"url": "data:image/png;base64," + base64.StdEncoding.EncodeToString(imageBytes),
+						"url": "data:image/png;base64," + base64.StdEncoding.EncodeToString(imageByte),
 					},
 				},
 			},
@@ -75,10 +81,11 @@ func (g *Image4oRequest) InitResponse(supplier string, duration time.Duration, t
 }
 
 type Image1Request struct {
-	ImageURLs []string `json:"image_urls"`
-	Prompt    string   `json:"prompt"`
-	Quality   string   `json:"quality"`
-	Size      string   `json:"size"`
+	ImageURLs  []string `json:"image_urls"`
+	ImageBytes [][]byte `json:"image_bytes"`
+	Prompt     string   `json:"prompt"`
+	Quality    string   `json:"quality"`
+	Size       string   `json:"size"`
 }
 
 func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
@@ -87,7 +94,11 @@ func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reade
 		body["model"] = "gpt-image-1"
 		body["n"] = 1
 		body["prompt"] = g.Prompt
-		body["image"] = g.ImageURLs[0]
+		if len(g.ImageBytes) != 0 {
+			body["image"] = base64.StdEncoding.EncodeToString(g.ImageBytes[0])
+		} else if len(g.ImageURLs) != 0 {
+			body["image"] = g.ImageURLs[0]
+		}
 		if g.Size != "" {
 			body["size"] = g.Size
 		}

@@ -1,14 +1,9 @@
 ######## 文件存储服务 ########
-# samba文件服务器
-samba:
-  server: "127.0.0.1"
-  port: "445"
-  username: "draw-hub-admin"
-  password: "admin"
-  share_name: "draw-hub"
-# 云供应商文件存储
-storage_enabled: true
-storage_supplier: "ali_oss"
+# 本地存储目录
+local_storage_directory: "storage/"
+# 云存储服务
+cloud_storage_enabled: true
+cloud_storage_supplier: "ali_oss"
 url_expires: "168h"
 # 阿里云OSS
 ali_oss:
@@ -94,11 +89,13 @@ request_order:
       model: "gpt-image-1"
   # grok deepsearch
   deepsearch:
-    - supplier: "geek"
+    -
+      supplier: "geek"
       token: "sk-"
       desc: "low_price"
       model: "grok-3-deepsearch"
-    - supplier: "tuzi"
+    -
+      supplier: "tuzi"
       token: "sk-"
       desc: "default"
       model: "grok-3-deepsearch"

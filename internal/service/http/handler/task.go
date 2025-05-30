@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/components/mysql"
 	"github.com/reusedev/draw-hub/internal/consts"
@@ -11,11 +13,14 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/model/image"
 	"github.com/reusedev/draw-hub/internal/modules/model/image/gpt"
 	"github.com/reusedev/draw-hub/internal/modules/storage/ali"
+	"github.com/reusedev/draw-hub/internal/modules/storage/local"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
 	"github.com/reusedev/draw-hub/internal/service/http/model"
 	"github.com/reusedev/draw-hub/tools"
+	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -28,7 +33,7 @@ type TaskHandler struct {
 }
 
 func (h *TaskHandler) run(form request.TaskForm) error {
-	imageURL, err := ali.OssClient.URL(h.inputImage.Key, time.Hour)
+	b, url, err := h.inputImageByteOrURL()
 	if err != nil {
 		return err
 	}
@@ -39,8 +44,9 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 	go func() {
 		if h.speed == consts.SlowSpeed {
 			editRequest := gpt.SlowRequest{
-				ImageURL: imageURL,
-				Prompt:   form.GetPrompt(),
+				ImageByte: b,
+				ImageURL:  url,
+				Prompt:    form.GetPrompt(),
 			}
 			h.imageResponse = gpt.SlowSpeed(editRequest)
 			err = h.endWork()
@@ -49,10 +55,17 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 			}
 		} else if h.speed == consts.FastSpeed {
 			editRequest := gpt.FastRequest{
-				ImageURLs: []string{imageURL},
-				Prompt:    form.GetPrompt(),
-				Quality:   form.GetQuality(),
-				Size:      form.GetSize(),
+				ImageBytes: [][]byte{},
+				ImageURLs:  []string{},
+				Prompt:     form.GetPrompt(),
+				Quality:    form.GetQuality(),
+				Size:       form.GetSize(),
+			}
+			if b != nil && len(b) > 0 {
+				editRequest.ImageBytes = append(editRequest.ImageBytes, b)
+			}
+			if url != "" {
+				editRequest.ImageURLs = append(editRequest.ImageURLs, url)
 			}
 			h.imageResponse = gpt.FastSpeed(editRequest)
 			err = h.endWork()
@@ -62,6 +75,37 @@ func (h *TaskHandler) run(form request.TaskForm) error {
 		}
 	}()
 	return nil
+}
+func (h *TaskHandler) inputImageByteOrURL() (b []byte, url string, err error) {
+	f, err := h.inputImageLocalFile()
+	if err == nil {
+		b, err = io.ReadAll(f)
+		if err == nil {
+			return
+		}
+	}
+	url, err = h.inputImageURL()
+	return
+}
+func (h *TaskHandler) inputImageLocalFile() (*os.File, error) {
+	f, err := os.Open(h.inputImage.Path)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+func (h *TaskHandler) inputImageURL() (string, error) {
+	if !config.GConfig.CloudStorageEnabled {
+		return "", fmt.Errorf("cloud storage is not enabled, cannot get input image URL")
+	}
+	if h.inputImage.Key == "" {
+		return "", fmt.Errorf("input image key is empty, cannot get URL")
+	}
+	url, err := ali.OssClient.URL(h.inputImage.Key, time.Hour)
+	if err != nil {
+		return "", err
+	}
+	return url, nil
 }
 func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 	now := time.Now()
@@ -105,20 +149,31 @@ func (h *TaskHandler) createImageRecords(imageResp image.Response) error {
 }
 func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 	for _, v := range imageResp.GetURLs() {
-		normal, err := uploadNormalImage(v)
+		imageBytes, _, err := tools.GetOnlineImage(v)
+		if err != nil {
+			return err
+		}
+		path, err := saveNormalImage(imageBytes)
 		if err != nil {
 			return err
 		}
 		imageRecord := model.OutputImage{
-			StorageSupplierName: config.GConfig.StorageSupplier,
-			Key:                 normal.Key,
-			ACL:                 "private",
-			TTL:                 0,
-			URL:                 normal.URL,
-			Type:                string(model.OuputImageTypeNormal),
-			ModelSupplierURL:    v,
-			ModelSupplierName:   imageResp.GetSupplier(),
-			ModelName:           imageResp.GetModel(),
+			Path:              path,
+			TTL:               0,
+			Type:              string(model.OuputImageTypeNormal),
+			ModelSupplierURL:  v,
+			ModelSupplierName: imageResp.GetSupplier(),
+			ModelName:         imageResp.GetModel(),
+		}
+		if config.GConfig.CloudStorageEnabled {
+			normal, err := uploadNormalImage(imageBytes)
+			if err != nil {
+				return err
+			}
+			imageRecord.StorageSupplierName = config.GConfig.CloudStorageSupplier
+			imageRecord.Key = normal.Key
+			imageRecord.ACL = "private"
+			imageRecord.URL = normal.URL
 		}
 		err = mysql.DB.Model(&model.OutputImage{}).Create(&imageRecord).Error
 		if err != nil {
@@ -139,21 +194,32 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 
 func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 	for _, v := range imageResp.GetURLs() {
-		compression, ratio, err := uploadCompressionImage(v, 95)
+		imageBytes, _, err := tools.GetOnlineImage(v)
+		if err != nil {
+			return err
+		}
+		path, ratio, err := saveCompressionImage(imageBytes, 95)
 		if err != nil {
 			return err
 		}
 		imageRecord := model.OutputImage{
-			StorageSupplierName: config.GConfig.StorageSupplier,
-			Key:                 compression.Key,
-			ACL:                 "private",
-			TTL:                 0,
-			URL:                 compression.URL,
-			Type:                string(model.OuputImageTypeCompressed),
-			CompressionRatio:    sql.NullFloat64{Valid: true, Float64: ratio},
-			ModelSupplierURL:    v,
-			ModelSupplierName:   imageResp.GetSupplier(),
-			ModelName:           imageResp.GetModel(),
+			Path:              path,
+			TTL:               0,
+			Type:              string(model.OuputImageTypeCompressed),
+			CompressionRatio:  sql.NullFloat64{Valid: true, Float64: ratio},
+			ModelSupplierURL:  v,
+			ModelSupplierName: imageResp.GetSupplier(),
+			ModelName:         imageResp.GetModel(),
+		}
+		if config.GConfig.CloudStorageEnabled {
+			compression, _, err := uploadCompressionImage(imageBytes, 95)
+			if err != nil {
+				return err
+			}
+			imageRecord.StorageSupplierName = config.GConfig.CloudStorageSupplier
+			imageRecord.Key = compression.Key
+			imageRecord.ACL = "private"
+			imageRecord.URL = compression.URL
 		}
 		err = mysql.DB.Model(&model.OutputImage{}).Create(&imageRecord).Error
 		if err != nil {
@@ -318,12 +384,25 @@ func TaskQuery(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(tasks))
 }
 
-func uploadNormalImage(supplierURL string) (normal ali.OSSObject, err error) {
-	bytes, _, err := tools.GetOnlineImage(supplierURL)
+func saveNormalImage(image []byte) (path string, err error) {
+	path = config.GConfig.LocalStorageDirectory + uuid.New().String() + "." + tools.DetectImageType(image)
+	err = local.SaveFile(bytes.NewReader(image), path)
+	return
+}
+
+func saveCompressionImage(image []byte, quality int) (path string, ratio float64, err error) {
+	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(image, quality)
 	if err != nil {
 		return
 	}
-	key, err := ali.OssClient.UploadPrivateImage(bytes)
+	ratio = float64(len(compressionBytes)) / float64(len(image))
+	path = config.GConfig.LocalStorageDirectory + uuid.New().String() + ".jpeg"
+	err = local.SaveFile(bytes.NewReader(compressionBytes), path)
+	return
+}
+
+func uploadNormalImage(image []byte) (normal ali.OSSObject, err error) {
+	key, err := ali.OssClient.UploadPrivateImage(image)
 	if err != nil {
 		return
 	}
@@ -339,16 +418,12 @@ func uploadNormalImage(supplierURL string) (normal ali.OSSObject, err error) {
 	return
 }
 
-func uploadCompressionImage(supplierURL string, quality int) (compression ali.OSSObject, ratio float64, err error) {
-	bytes, _, err := tools.GetOnlineImage(supplierURL)
+func uploadCompressionImage(image []byte, quality int) (compression ali.OSSObject, ratio float64, err error) {
+	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(image, quality)
 	if err != nil {
 		return
 	}
-	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(bytes, quality)
-	if err != nil {
-		return
-	}
-	ratio = float64(len(compressionBytes)) / float64(len(bytes))
+	ratio = float64(len(compressionBytes)) / float64(len(image))
 	key, err := ali.OssClient.UploadPrivateImage(compressionBytes)
 	if err != nil {
 		return

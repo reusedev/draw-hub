@@ -27,6 +27,7 @@ type ossClient struct {
 }
 
 type UploadRequest struct {
+	Key       string        `json:"key,omitempty"` // Optional, if provided, will use this as the object key
 	Filename  string        `json:"filename"`
 	File      io.Reader     `json:"file"`
 	Acl       string        `json:"acl"`
@@ -65,14 +66,19 @@ func (o *ossClient) validACL(acl string) bool {
 
 func (o *ossClient) UploadFile(request *UploadRequest) (OSSObject, error) {
 	ret := OSSObject{}
-	ext := filepath.Ext(request.Filename)
-	key := o.fullPath(uuid.New().String() + ext)
+	var key string
+	if request.Key != "" {
+		key = request.Key
+	} else {
+		ext := filepath.Ext(request.Filename)
+		key = o.fullPath(uuid.New().String() + ext)
+	}
+	ret.Key = key
 
 	err := o.upload(request.Filename, key, request.Acl, request.File)
 	if err != nil {
 		return ret, err
 	}
-	ret.Key = key
 	if oss.ObjectACLType(request.Acl) == oss.ObjectACLPublicRead {
 		ret.URL = "https://" + o.bucketName + "." + strings.TrimPrefix(o.endpoint, "https://") + "/" + key
 		ret.URLExpire = nil
