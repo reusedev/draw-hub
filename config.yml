@@ -2,7 +2,7 @@
 # 本地存储目录
 local_storage_directory: "storage/"
 # 云存储服务
-cloud_storage_enabled: true
+cloud_storage_enabled: false
 cloud_storage_supplier: "ali_oss"
 url_expires: "168h"
 # 阿里云OSS
