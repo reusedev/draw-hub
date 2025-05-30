@@ -13,9 +13,9 @@ AI 绘图服务，对接了多家不同的供应商
 ✅ gpt-image-1
 
 绘图供应商:
-✅ Geek
-✅ Tuzi
-✅ V3
+✅ [Geek](https://geekai.dev/)
+✅ [Tuzi](https://api.v3.cm/)
+✅ [V3](https://api.tu-zi.com/)
 
 ## 初衷
 1. 寻找价格较低的生图供应商，但接口不稳定，想要加强服务稳定性
@@ -24,7 +24,6 @@ AI 绘图服务，对接了多家不同的供应商
 
 ## 快速开始
 ### 前置条件
-- 阿里云OSS服务（图片存储使用）
 - 一个或多个绘图供应商服务（Geek、Tuzi、V3）
 - MySQL 5.7及以上
 - Golang 1.23及以上
@@ -32,7 +31,7 @@ AI 绘图服务，对接了多家不同的供应商
 ```shell
 git clone https://github.com/reusedev/draw-hub.git
 cd draw-hub
-# 配置OSS、MySQL、绘图供应商及请求优先级
+# 配置MySQL、绘图供应商及请求优先级
 vim config.yml
 # 下载依赖
 go mod download
