@@ -32,7 +32,7 @@ func UploadImage(c *gin.Context) {
 	}
 	resp, err := ali.OssClient.UploadFile(&uploadReq)
 	if err != nil {
-		logs.Logger.Err(err)
+		logs.Logger.Err(err).Msg("image-UploadImage")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
@@ -46,7 +46,7 @@ func UploadImage(c *gin.Context) {
 	}
 	err = mysql.DB.Create(&r).Error
 	if err != nil {
-		logs.Logger.Err(err)
+		logs.Logger.Err(err).Msg("image-UploadImage")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}

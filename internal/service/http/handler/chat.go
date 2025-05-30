@@ -30,10 +30,10 @@ func (c *chatHandler) chat() (*response.ChatCompletion, error) {
 	for _, v := range resp {
 		m, err := v.Marsh()
 		if err != nil {
-			logs.Logger.Err(err)
+			logs.Logger.Err(err).Msg("chat-DeepSearch")
 			continue
 		}
-		logs.Logger.Info().Str("Chat response: ", string(m))
+		logs.Logger.Info().Str("Chat response: ", string(m)).Msg("chat-DeepSearch")
 		if v.Succeed() {
 			ret := &response.ChatCompletion{}
 			err = json.Unmarshal([]byte(v.RawBody()), ret)
@@ -56,7 +56,7 @@ func ChatCompletions(c *gin.Context) {
 	handler := newHandler(req)
 	resp, err := handler.chat()
 	if err != nil {
-		logs.Logger.Err(err)
+		logs.Logger.Err(err).Msg("chat-ChatCompletions")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}

@@ -13,7 +13,7 @@ func DeepSearch(request chat.CommonRequest) []chat.Response {
 		requester := chat.NewRequester(chat.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &request, &chat.CommonParser{})
 		response, err := requester.Do()
 		if err != nil {
-			logs.Logger.Err(err)
+			logs.Logger.Err(err).Msg("grok-DeepSearch")
 			continue
 		}
 		ret = append(ret, response)
