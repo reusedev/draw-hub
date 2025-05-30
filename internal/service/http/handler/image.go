@@ -13,6 +13,7 @@ import (
 	"github.com/reusedev/draw-hub/internal/service/http/model"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -79,6 +80,10 @@ func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (resp
 		key = s.outputImage.Key
 		acl = s.outputImage.ACL
 		url = s.outputImage.URL
+	}
+	if request.Type == "output" && strings.HasSuffix(s.outputImage.ModelSupplierURL, ".png") {
+		ret.URL = s.outputImage.ModelSupplierURL
+		return ret, nil
 	}
 	if config.GConfig.CloudStorageEnabled {
 		if acl == "private" {
