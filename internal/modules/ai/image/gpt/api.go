@@ -3,8 +3,8 @@ package gpt
 import (
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
-	"github.com/reusedev/draw-hub/internal/modules/model/image"
 )
 
 type FastRequest struct {

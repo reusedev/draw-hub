@@ -6,11 +6,12 @@ import (
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/components/mysql"
 	"github.com/reusedev/draw-hub/internal/modules/dao"
+	"github.com/reusedev/draw-hub/internal/modules/logs"
+	"github.com/reusedev/draw-hub/internal/modules/model"
 	"github.com/reusedev/draw-hub/internal/modules/storage/ali"
 	"github.com/reusedev/draw-hub/internal/modules/storage/local"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
-	"github.com/reusedev/draw-hub/internal/service/http/model"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -199,7 +200,8 @@ func UploadImage(c *gin.Context) {
 	handler := NewStorageHandler()
 	err = handler.Upload(req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ParamError)
+		logs.Logger.Err(err).Msg("Image-Upload")
+		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(handler.InputImage()))
@@ -220,6 +222,7 @@ func GetImage(c *gin.Context) {
 	handler := NewStorageHandler()
 	resp, err := handler.Query(req)
 	if err != nil {
+		logs.Logger.Err(err).Msg("Image-Get")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}

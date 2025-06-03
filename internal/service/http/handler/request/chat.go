@@ -1,6 +1,6 @@
 package request
 
-import "github.com/reusedev/draw-hub/internal/modules/model/chat"
+import "github.com/reusedev/draw-hub/internal/modules/ai/chat"
 
 type ChatCompletion struct {
 	Model    string    `json:"model"`

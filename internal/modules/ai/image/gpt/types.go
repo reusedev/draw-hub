@@ -7,7 +7,7 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/reusedev/draw-hub/internal/consts"
-	"github.com/reusedev/draw-hub/internal/modules/model/image"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/tools"
 	"io"
 	"mime/multipart"

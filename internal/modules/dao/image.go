@@ -2,7 +2,7 @@ package dao
 
 import (
 	"github.com/reusedev/draw-hub/internal/components/mysql"
-	"github.com/reusedev/draw-hub/internal/service/http/model"
+	"github.com/reusedev/draw-hub/internal/modules/model"
 )
 
 func InputImageById(id int) (model.InputImage, error) {

@@ -3,8 +3,8 @@ package grok
 import (
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai/chat"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
-	"github.com/reusedev/draw-hub/internal/modules/model/chat"
 )
 
 func DeepSearch(request chat.CommonRequest) []chat.Response {

@@ -2,7 +2,7 @@ package gpt
 
 import (
 	jsoniter "github.com/json-iterator/go"
-	"github.com/reusedev/draw-hub/internal/modules/model/image"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"io"
 	"net/http"
 	"regexp"
