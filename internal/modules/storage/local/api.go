@@ -8,7 +8,7 @@ import (
 
 func SaveFile(f io.Reader, path string) error {
 	dir := filepath.Dir(path)
-	err := os.MkdirAll(dir, 0744)
+	err := os.MkdirAll(dir, 0770)
 	if err != nil {
 		return err
 	}

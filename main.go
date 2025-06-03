@@ -28,6 +28,7 @@ func main() {
 	flag.Parse()
 	config.Init(tools.ReadFile(configPath))
 	logs.InitLogger()
+	syscall.Umask(0007)
 	mysql.CreateDataBase(config.GConfig.MySQL)
 	mysql.InitMySQL(config.GConfig.MySQL)
 	mysql.DB.AutoMigrate(&model.InputImage{}, &model.OutputImage{}, &model.Task{}, &model.TaskImage{}, &model.SupplierInvokeHistory{})
