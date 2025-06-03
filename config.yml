@@ -24,9 +24,9 @@ mysql:
   max_open_conns: 100
 
 ######## 图片生成服务 ########
-# 极客智坊 https://geekai.dev/
-# V_API https://api.v3.cm/
-# 兔子API https://api.tu-zi.com/
+# 极客智坊 https://geekai.dev/chat?invite_code=naHMII
+# V3_API https://api.v3.cm/register?aff=ROjp
+# 兔子API https://api.tu-zi.com/register?aff=ROfC
 
 # 请求顺序
 # 1. 先请求极客智坊的低价接口
