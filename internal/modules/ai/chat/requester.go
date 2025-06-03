@@ -3,6 +3,7 @@ package chat
 import (
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/http_client"
+	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/tools"
 	"net/http"
 	"time"
@@ -50,8 +51,18 @@ func (r *Requester) Do() (Response, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	logs.Logger.Info().Str("supplier", r.token.Supplier.String()).
+		Str("token_desc", r.token.Desc).
+		Str("path", r.RequestTypes.Path()).
+		Str("method", req.Method).
+		Int("status_code", resp.StatusCode).
+		Dur("duration", duration).
+		Msg("chat request")
 	ret := r.RequestTypes.InitResponse(r.token.Supplier.String(), duration, r.token.Desc)
 	err = r.Parser.Parse(resp, ret)
+	if err != nil {
+		return nil, err
+	}
 
 	return ret, nil
 }

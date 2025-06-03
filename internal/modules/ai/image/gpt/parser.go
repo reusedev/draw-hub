@@ -3,6 +3,7 @@ package gpt
 import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
+	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"io"
 	"net/http"
 	"regexp"
@@ -18,6 +19,17 @@ func (g *Image4oParser) Parse(resp *http.Response, response image.Response) erro
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		logs.Logger.Warn().Str("supplier", realResp.Supplier).
+			Str("token_desc", realResp.TokenDesc).
+			Str("model", realResp.Model).
+			Str("path", resp.Request.URL.Path).
+			Str("method", resp.Request.Method).
+			Int("status_code", resp.StatusCode).
+			Dur("duration", realResp.Duration).
+			Str("body", string(body)).
+			Msg("image request failed")
 	}
 	realResp.RespBody = string(body)
 	realResp.RespAt = time.Now()
@@ -40,6 +52,17 @@ func (g *Image1Parser) Parse(resp *http.Response, response image.Response) error
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		logs.Logger.Warn().Str("supplier", realResp.Supplier).
+			Str("token_desc", realResp.TokenDesc).
+			Str("model", realResp.Model).
+			Str("path", resp.Request.URL.Path).
+			Str("method", resp.Request.Method).
+			Int("status_code", resp.StatusCode).
+			Dur("duration", realResp.Duration).
+			Str("body", string(body)).
+			Msg("image request failed")
 	}
 	realResp.RespBody = string(body)
 	realResp.RespAt = time.Now()

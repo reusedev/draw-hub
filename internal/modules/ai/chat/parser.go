@@ -3,6 +3,7 @@ package chat
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"io"
 	"net/http"
 	"time"
@@ -48,6 +49,16 @@ func (c *CommonParser) Parse(resp *http.Response, response Response) error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		logs.Logger.Warn().Str("supplier", realResp.Supplier).
+			Str("token_desc", realResp.TokenDesc).
+			Str("path", resp.Request.URL.Path).
+			Str("method", resp.Request.Method).
+			Int("status_code", resp.StatusCode).
+			Dur("duration", realResp.Duration).
+			Str("body", string(body)).
+			Msg("chat request failed")
 	}
 	realResp.Body = string(body)
 	return nil
