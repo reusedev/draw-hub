@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -88,7 +89,8 @@ func (h *TaskHandler) inputImageByteOrURL() (b []byte, url string, err error) {
 	return
 }
 func (h *TaskHandler) inputImageLocalFile() (*os.File, error) {
-	f, err := os.Open(h.inputImage.Path)
+	absPath := filepath.Join(config.GConfig.LocalStorageDirectory, h.inputImage.Path)
+	f, err := os.Open(absPath)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +155,7 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 		if err != nil {
 			return err
 		}
-		path, err := saveNormalImage(imageBytes)
+		path, err := saveNormalImage(imageBytes, h.task.CreatedAt, imageResp.GetSupplier())
 		if err != nil {
 			return err
 		}
@@ -198,7 +200,7 @@ func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 		if err != nil {
 			return err
 		}
-		path, ratio, err := saveCompressionImage(imageBytes, 95)
+		path, ratio, err := saveCompressionImage(imageBytes, 95, h.task.CreatedAt, imageResp.GetSupplier())
 		if err != nil {
 			return err
 		}
@@ -384,19 +386,21 @@ func TaskQuery(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(tasks))
 }
 
-func saveNormalImage(image []byte) (path string, err error) {
-	path = config.GConfig.LocalStorageDirectory + uuid.New().String() + "." + tools.DetectImageType(image)
+func saveNormalImage(image []byte, t time.Time, supplier string) (relativePath string, err error) {
+	relativePath = filepath.Join("output", "o", t.Format("20060102"), supplier, uuid.New().String()+"."+tools.DetectImageType(image))
+	path := filepath.Join(config.GConfig.LocalStorageDirectory, relativePath)
 	err = local.SaveFile(bytes.NewReader(image), path)
 	return
 }
 
-func saveCompressionImage(image []byte, quality int) (path string, ratio float64, err error) {
+func saveCompressionImage(image []byte, quality int, t time.Time, supplier string) (relativePath string, ratio float64, err error) {
 	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(image, quality)
 	if err != nil {
 		return
 	}
 	ratio = float64(len(compressionBytes)) / float64(len(image))
-	path = config.GConfig.LocalStorageDirectory + uuid.New().String() + ".jpeg"
+	relativePath = filepath.Join("output", "c", t.Format("20060102"), supplier, uuid.New().String()+".jpeg")
+	path := filepath.Join(config.GConfig.LocalStorageDirectory, relativePath)
 	err = local.SaveFile(bytes.NewReader(compressionBytes), path)
 	return
 }

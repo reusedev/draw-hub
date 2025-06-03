@@ -103,9 +103,10 @@ func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (resp
 }
 
 func (s *StorageHandler) initInputImage(request request.UploadRequest) {
+	now := time.Now()
 	s.inputImage.TTL = request.TTL
-	s.inputImage.Path = s.localStoragePath(request.File.Filename)
-	s.inputImage.CreatedAt = time.Now()
+	s.inputImage.CreatedAt = now
+	s.inputImage.Path = s.localStoragePath(request.File.Filename, now)
 	if config.GConfig.CloudStorageEnabled {
 		s.inputImage.Key = s.ossStorageKey(request.File.Filename)
 		s.inputImage.ACL = request.ACL
@@ -144,15 +145,16 @@ func (s *StorageHandler) localSave(request request.UploadRequest) error {
 		return err
 	}
 	defer f.Close()
-	err = local.SaveFile(f, s.inputImage.Path)
+	absPath := filepath.Join(config.GConfig.LocalStorageDirectory, s.inputImage.Path)
+	err = local.SaveFile(f, absPath)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func (s *StorageHandler) localStoragePath(filename string) string {
+func (s *StorageHandler) localStoragePath(filename string, t time.Time) string {
 	ext := filepath.Ext(filename)
-	path := config.GConfig.LocalStorageDirectory + uuid.New().String() + ext
+	path := filepath.Join("input", t.Format("20060102"), uuid.New().String()+ext)
 	return path
 }
 func (s *StorageHandler) ossStorageKey(filename string) string {
