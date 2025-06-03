@@ -13,9 +13,9 @@ AI 绘图服务，对接了多家不同的供应商
 ✅ gpt-image-1
 
 绘图供应商:
-✅ [Geek](https://geekai.dev/)
-✅ [Tuzi](https://api.v3.cm/)
-✅ [V3](https://api.tu-zi.com/)
+✅ [Geek](https://geekai.dev/chat?invite_code=naHMII)
+✅ [Tuzi](https://api.tu-zi.com/register?aff=ROfC)
+✅ [V3](https://api.v3.cm/register?aff=ROjp)
 
 ## 初衷
 1. 寻找价格较低的生图供应商，但接口不稳定，想要加强服务稳定性

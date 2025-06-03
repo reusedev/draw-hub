@@ -7,3 +7,4 @@ config.prod.yml
 deploy.sh
 starter.sh
 draw-hub-*
+/storage
