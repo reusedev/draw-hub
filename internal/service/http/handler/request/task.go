@@ -4,6 +4,7 @@ type TaskForm interface {
 	GetGroupId() string
 	GetImageId() int
 	GetPrompt() string
+	GetSpeed() string
 	GetQuality() string
 	GetSize() string
 }
@@ -29,6 +30,9 @@ func (s *SlowTask) GetQuality() string {
 func (s *SlowTask) GetSize() string {
 	return ""
 }
+func (s *SlowTask) GetSpeed() string {
+	return "slow"
+}
 
 type FastSpeed struct {
 	GroupId string `form:"group_id"`
@@ -52,4 +56,7 @@ func (s *FastSpeed) GetQuality() string {
 }
 func (s *FastSpeed) GetSize() string {
 	return s.Size
+}
+func (s *FastSpeed) GetSpeed() string {
+	return "fast"
 }

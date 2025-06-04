@@ -53,9 +53,9 @@ func EnqueueUnfinishedTask() error {
 				inputImage = img.InputImage
 			}
 		}
-		if task.Model == consts.GPTImage1.String() {
+		if task.Speed == consts.FastSpeed.String() {
 			speed = consts.FastSpeed
-		} else {
+		} else if task.Speed == consts.SlowSpeed.String() {
 			speed = consts.SlowSpeed
 		}
 		h := TaskHandler{speed: speed, inputImage: &inputImage, task: &task}
@@ -166,6 +166,7 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 		TaskGroupId: form.GetGroupId(),
 		Type:        model.TaskTypeEdit.String(),
 		Prompt:      form.GetPrompt(),
+		Speed:       form.GetSpeed(),
 		Status:      model.TaskStatusPending.String(),
 		Quality:     form.GetQuality(),
 		Size:        form.GetSize(),

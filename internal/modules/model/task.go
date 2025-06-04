@@ -7,6 +7,7 @@ type Task struct {
 	TaskGroupId  string      `json:"task_group_id" gorm:"column:task_group_id;type:varchar(50)"`
 	Type         string      `json:"type" gorm:"column:type;type:enum('generate', 'edit')"`
 	Prompt       string      `json:"prompt" gorm:"column:prompt;type:varchar(5000)"`
+	Speed        string      `json:"speed" gorm:"column:speed;type:enum('fast', 'slow')"`
 	Model        string      `json:"model" gorm:"column:model;type:varchar(20)"`
 	Quality      string      `json:"quality" gorm:"column:quality;type:varchar(20)"`
 	Size         string      `json:"size" gorm:"column:size;type:varchar(20)"`

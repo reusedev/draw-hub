@@ -36,3 +36,7 @@ const (
 	SlowSpeed TaskSpeed = "slow"
 	FastSpeed TaskSpeed = "fast"
 )
+
+func (s TaskSpeed) String() string {
+	return string(s)
+}
