@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/reusedev/draw-hub/internal/service/http/handler"
 	"github.com/reusedev/draw-hub/internal/service/http/middleware"
+	"net/http"
 )
 
 func Serve(port string) {
@@ -21,7 +22,11 @@ func Serve(port string) {
 	e.SetTrustedProxies(trustedProxies)
 
 	initRouter(e)
-	if err := e.Run(port); err != nil {
+	srv := &http.Server{
+		Addr:    port,
+		Handler: e,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		panic(err)
 	}
 }

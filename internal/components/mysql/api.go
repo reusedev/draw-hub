@@ -36,3 +36,13 @@ func CreateDataBase(config config.MySQL) {
 		panic(err)
 	}
 }
+
+func FieldMigrate() {
+	err := DB.Exec(`
+        ALTER TABLE task
+        MODIFY COLUMN status ENUM('pending', 'queued', 'running', 'succeed', 'aborted', 'failed')
+    `).Error
+	if err != nil {
+		panic(fmt.Sprintf("Failed to migrate tasks table: %v", err))
+	}
+}

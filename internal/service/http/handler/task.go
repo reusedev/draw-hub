@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/ai/image/gpt"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/model"
+	"github.com/reusedev/draw-hub/internal/modules/queue"
 	"github.com/reusedev/draw-hub/internal/modules/storage/ali"
 	"github.com/reusedev/draw-hub/internal/modules/storage/local"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
@@ -22,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -29,55 +32,99 @@ type TaskHandler struct {
 	speed         consts.TaskSpeed
 	inputImage    *model.InputImage
 	task          *model.Task
-	taskImage     *model.TaskImage
 	imageResponse []image.Response
 }
 
-func (h *TaskHandler) run(form request.TaskForm) error {
-	b, url, err := h.inputImageByteOrURL()
+func EnqueueUnfinishedTask() error {
+	tasks := make([]model.Task, 0)
+	err := mysql.DB.Model(&model.Task{}).
+		Preload("TaskImages").
+		Preload("TaskImages.InputImage").
+		Preload("TaskImages.OutputImage").
+		Where("status = ?", model.TaskStatusAborted.String()).Find(&tasks).Error
 	if err != nil {
 		return err
 	}
-	err = h.createTaskRecord(form)
-	if err != nil {
-		return err
-	}
-	go func() {
-		if h.speed == consts.SlowSpeed {
-			editRequest := gpt.SlowRequest{
-				ImageByte: b,
-				ImageURL:  url,
-				Prompt:    form.GetPrompt(),
-			}
-			h.imageResponse = gpt.SlowSpeed(editRequest)
-			err = h.endWork()
-			if err != nil {
-				logs.Logger.Err(err).Msg("task-SlowSpeed")
-			}
-		} else if h.speed == consts.FastSpeed {
-			editRequest := gpt.FastRequest{
-				ImageBytes: [][]byte{},
-				ImageURLs:  []string{},
-				Prompt:     form.GetPrompt(),
-				Quality:    form.GetQuality(),
-				Size:       form.GetSize(),
-			}
-			if b != nil && len(b) > 0 {
-				editRequest.ImageBytes = append(editRequest.ImageBytes, b)
-			}
-			if url != "" {
-				editRequest.ImageURLs = append(editRequest.ImageURLs, url)
-			}
-			h.imageResponse = gpt.FastSpeed(editRequest)
-			err = h.endWork()
-			if err != nil {
-				logs.Logger.Err(err).Msg("task-FastSpeed")
+	for _, task := range tasks {
+		var inputImage model.InputImage
+		var speed consts.TaskSpeed
+		for _, img := range task.TaskImages {
+			if img.Type == "input" {
+				inputImage = img.InputImage
 			}
 		}
-	}()
+		if task.Model == consts.GPTImage1.String() {
+			speed = consts.FastSpeed
+		} else {
+			speed = consts.SlowSpeed
+		}
+		h := TaskHandler{speed: speed, inputImage: &inputImage, task: &task}
+		h.enqueue()
+		logs.Logger.Info().Int("task_id", task.Id).Msg("Re-enqueued task")
+	}
 	return nil
 }
-func (h *TaskHandler) inputImageByteOrURL() (b []byte, url string, err error) {
+
+func (h *TaskHandler) enqueue() {
+	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
+		"status": model.TaskStatusQueued.String(),
+	})
+	queue.ImageTaskQueue <- h
+}
+
+func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
+	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
+		"status": model.TaskStatusRunning.String(),
+	})
+	down := make(chan struct{})
+	defer func() { down <- struct{}{} }()
+	go func() {
+		select {
+		case <-ctx.Done():
+			mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
+				"status": model.TaskStatusAborted.String(),
+			})
+			wg.Done()
+			return
+		case <-down:
+			wg.Done()
+			return
+		}
+	}()
+	b, err := h.inputImageByte()
+	if err != nil {
+		return err
+	}
+	if h.speed == consts.SlowSpeed {
+		editRequest := gpt.SlowRequest{
+			ImageByte: b,
+			Prompt:    h.task.Prompt,
+		}
+		h.imageResponse = gpt.SlowSpeed(editRequest)
+		err = h.endWork()
+		if err != nil {
+			logs.Logger.Err(err).Msg("task-SlowSpeed")
+		}
+	} else if h.speed == consts.FastSpeed {
+		editRequest := gpt.FastRequest{
+			ImageBytes: [][]byte{},
+			ImageURLs:  []string{},
+			Prompt:     h.task.Prompt,
+			Quality:    h.task.Quality,
+			Size:       h.task.Size,
+		}
+		if b != nil && len(b) > 0 {
+			editRequest.ImageBytes = append(editRequest.ImageBytes, b)
+		}
+		h.imageResponse = gpt.FastSpeed(editRequest)
+		err = h.endWork()
+		if err != nil {
+			logs.Logger.Err(err).Msg("task-FastSpeed")
+		}
+	}
+	return nil
+}
+func (h *TaskHandler) inputImageByte() (b []byte, err error) {
 	f, err := h.inputImageLocalFile()
 	if err == nil {
 		b, err = io.ReadAll(f)
@@ -85,7 +132,11 @@ func (h *TaskHandler) inputImageByteOrURL() (b []byte, url string, err error) {
 			return
 		}
 	}
-	url, err = h.inputImageURL()
+	url, err := h.inputImageURL()
+	if err != nil {
+		return
+	}
+	b, _, err = tools.GetOnlineImage(url)
 	return
 }
 func (h *TaskHandler) inputImageLocalFile() (*os.File, error) {
@@ -115,7 +166,7 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 		TaskGroupId: form.GetGroupId(),
 		Type:        model.TaskTypeEdit.String(),
 		Prompt:      form.GetPrompt(),
-		Status:      model.TaskStatusRunning.String(),
+		Status:      model.TaskStatusPending.String(),
 		Quality:     form.GetQuality(),
 		Size:        form.GetSize(),
 		CreatedAt:   now,
@@ -135,7 +186,6 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 	if err != nil {
 		return err
 	}
-	h.taskImage = &taskImageRecord
 	return nil
 }
 func (h *TaskHandler) createImageRecords(imageResp image.Response) error {
@@ -338,13 +388,13 @@ func SlowSpeed(c *gin.Context) {
 		return
 	}
 	h := TaskHandler{speed: consts.SlowSpeed, inputImage: &inputImage}
-	err = h.run(&form)
-
+	err = h.createTaskRecord(&form)
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-SlowSpeed")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
+	h.enqueue()
 	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
 }
 
@@ -363,13 +413,13 @@ func FastSpeed(c *gin.Context) {
 		return
 	}
 	h := TaskHandler{speed: consts.FastSpeed, inputImage: &inputImage}
-	err = h.run(&form)
-
+	err = h.createTaskRecord(&form)
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-FastSpeed")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
+	h.enqueue()
 	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
 }
 
