@@ -8,3 +8,6 @@ deploy.sh
 starter.sh
 draw-hub-*
 /storage
+.idea
+.DS_Store
+
