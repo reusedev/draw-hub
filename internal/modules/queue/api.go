@@ -12,25 +12,22 @@ func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	for {
 		select {
-		case task := <-ImageTaskQueue:
-			wg.Add(1)
-			go func() {
-				err := task.Execute(ctx, wg)
-				if err != nil {
-					logs.Logger.Err(err).Msg("Image task execution failed")
-				}
-			}()
+		case task, ok := <-ImageTaskQueue:
+			if ok {
+				wg.Add(1)
+				go func() {
+					err := task.Execute(ctx, wg)
+					if err != nil {
+						logs.Logger.Err(err).Msg("Image task execution failed")
+					}
+				}()
+			} else {
+				wg.Done()
+				return
+			}
 		case <-ctx.Done():
 			close(ImageTaskQueue)
-			logs.Logger.Info().Msg("Image task queue stopped")
-			for task := range ImageTaskQueue {
-				wg.Add(1)
-				if err := task.Execute(ctx, wg); err != nil {
-					logs.Logger.Err(err).Msg("Shutdown task failed")
-				}
-			}
-			wg.Done()
-			return
+			logs.Logger.Info().Msg("Image task queue closed")
 		}
 	}
 }
