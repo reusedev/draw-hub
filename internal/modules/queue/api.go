@@ -13,8 +13,8 @@ func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case task := <-ImageTaskQueue:
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				err := task.Execute(ctx, wg)
 				if err != nil {
 					logs.Logger.Err(err).Msg("Image task execution failed")
