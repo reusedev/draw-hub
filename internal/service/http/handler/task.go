@@ -316,17 +316,17 @@ func (h *TaskHandler) endWork() error {
 			if i != len(h.imageResponse)-1 {
 				return fmt.Errorf("not the last response, but succeed. task_id: %d", h.task.Id)
 			}
+			err := h.createImageRecords(v)
+			if err != nil {
+				return err
+			}
 			taskRecord := model.Task{
 				Id:       h.task.Id,
 				Model:    v.GetModel(),
 				Status:   model.TaskStatusSucceed.String(),
 				Progress: 100,
 			}
-			err := mysql.DB.Updates(&taskRecord).Error
-			if err != nil {
-				return err
-			}
-			err = h.createImageRecords(v)
+			err = mysql.DB.Updates(&taskRecord).Error
 			if err != nil {
 				return err
 			}
