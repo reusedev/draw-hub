@@ -20,17 +20,6 @@ func (g *Image4oParser) Parse(resp *http.Response, response image.Response) erro
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
-		logs.Logger.Warn().Str("supplier", realResp.Supplier).
-			Str("token_desc", realResp.TokenDesc).
-			Str("model", realResp.Model).
-			Str("path", resp.Request.URL.Path).
-			Str("method", resp.Request.Method).
-			Int("status_code", resp.StatusCode).
-			Dur("duration", realResp.Duration).
-			Str("body", string(body)).
-			Msg("image request failed")
-	}
 	realResp.RespBody = string(body)
 	realResp.RespAt = time.Now()
 	reg := `]\((https?[^)]+)\)`
@@ -40,6 +29,17 @@ func (g *Image4oParser) Parse(resp *http.Response, response image.Response) erro
 		url := matches[len(matches)-1][1]
 		url = strings.ReplaceAll(url, "\\u0026", "&")
 		realResp.URLs = append(realResp.URLs, url)
+	}
+	if !realResp.Succeed() {
+		logs.Logger.Warn().Str("supplier", realResp.Supplier).
+			Str("token_desc", realResp.TokenDesc).
+			Str("model", realResp.Model).
+			Str("path", resp.Request.URL.Path).
+			Str("method", resp.Request.Method).
+			Int("status_code", resp.StatusCode).
+			Dur("duration", realResp.Duration).
+			Str("body", string(body)).
+			Msg("image resp error")
 	}
 	return nil
 }
@@ -52,17 +52,6 @@ func (g *Image1Parser) Parse(resp *http.Response, response image.Response) error
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		logs.Logger.Warn().Str("supplier", realResp.Supplier).
-			Str("token_desc", realResp.TokenDesc).
-			Str("model", realResp.Model).
-			Str("path", resp.Request.URL.Path).
-			Str("method", resp.Request.Method).
-			Int("status_code", resp.StatusCode).
-			Dur("duration", realResp.Duration).
-			Str("body", string(body)).
-			Msg("image request failed")
 	}
 	realResp.RespBody = string(body)
 	realResp.RespAt = time.Now()
@@ -80,6 +69,17 @@ func (g *Image1Parser) Parse(resp *http.Response, response image.Response) error
 	for _, v := range s.Data {
 		realResp.URLs = append(realResp.URLs, v.URL)
 		realResp.Base64 = append(realResp.Base64, v.B64JSON)
+	}
+	if !realResp.Succeed() {
+		logs.Logger.Warn().Str("supplier", realResp.Supplier).
+			Str("token_desc", realResp.TokenDesc).
+			Str("model", realResp.Model).
+			Str("path", resp.Request.URL.Path).
+			Str("method", resp.Request.Method).
+			Int("status_code", resp.StatusCode).
+			Dur("duration", realResp.Duration).
+			Str("body", string(body)).
+			Msg("image resp error")
 	}
 	return nil
 }
