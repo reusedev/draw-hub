@@ -434,6 +434,7 @@ func TaskQuery(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
+	logs.Logger.Debug().Interface("tasks", tasks).Msg("Task-Query")
 	c.JSON(http.StatusOK, response.SuccessWithData(tasks))
 }
 
