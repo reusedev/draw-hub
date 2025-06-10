@@ -40,8 +40,8 @@ func main() {
 	mysql.InitMySQL(config.GConfig.MySQL)
 	mysql.DB.AutoMigrate(&model.InputImage{}, &model.OutputImage{}, &model.Task{}, &model.TaskImage{}, &model.SupplierInvokeHistory{})
 	mysql.FieldMigrate()
-	handler.EnqueueUnfinishedTask()
 	ali.InitOSS(config.GConfig.AliOss)
+	handler.EnqueueUnfinishedTask()
 	osSignal := make(chan os.Signal, 1)
 	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	go func(ch chan os.Signal) {
