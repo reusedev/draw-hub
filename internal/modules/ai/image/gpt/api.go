@@ -9,25 +9,22 @@ import (
 
 type FastRequest struct {
 	ImageBytes [][]byte `json:"image_bytes"`
-	ImageURLs  []string `json:"image_urls"`
 	Prompt     string   `json:"prompt"`
 	Quality    string   `json:"quality"`
 	Size       string   `json:"size"`
 }
 
 type SlowRequest struct {
-	ImageByte []byte `json:"image_byte"`
-	ImageURL  string `json:"image_url"`
-	Prompt    string `json:"prompt"`
+	ImageBytes [][]byte `json:"image_bytes"`
+	Prompt     string   `json:"prompt"`
 }
 
 func SlowSpeed(request SlowRequest) []image.Response {
 	ret := make([]image.Response, 0)
 	for _, order := range config.GConfig.RequestOrder.SlowSpeed {
 		content := Image4oRequest{
-			ImageByte: request.ImageByte,
-			ImageURL:  request.ImageURL,
-			Prompt:    request.Prompt,
+			ImageBytes: request.ImageBytes,
+			Prompt:     request.Prompt,
 		}
 		if order.Model == consts.GPT4oImageVip.String() {
 			content.Vip = true
@@ -51,7 +48,6 @@ func FastSpeed(request FastRequest) []image.Response {
 	for _, order := range config.GConfig.RequestOrder.FastSpeed {
 		content := Image1Request{
 			ImageBytes: request.ImageBytes,
-			ImageURLs:  request.ImageURLs,
 			Prompt:     request.Prompt,
 			Quality:    request.Quality,
 			Size:       request.Size,

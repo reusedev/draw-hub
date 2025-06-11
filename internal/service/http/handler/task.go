@@ -20,9 +20,7 @@ import (
 	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
 	"github.com/reusedev/draw-hub/tools"
-	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -30,7 +28,7 @@ import (
 
 type TaskHandler struct {
 	speed         consts.TaskSpeed
-	inputImage    *model.InputImage
+	inputImages   []*model.InputImage
 	task          *model.Task
 	imageResponse []image.Response
 }
@@ -46,11 +44,11 @@ func EnqueueUnfinishedTask() error {
 		return err
 	}
 	for _, task := range tasks {
-		var inputImage model.InputImage
+		inputImages := make([]*model.InputImage, 0)
 		var speed consts.TaskSpeed
 		for _, img := range task.TaskImages {
 			if img.Type == "input" {
-				inputImage = img.InputImage
+				inputImages = append(inputImages, &img.InputImage)
 			}
 		}
 		if task.Speed == consts.FastSpeed.String() {
@@ -58,7 +56,7 @@ func EnqueueUnfinishedTask() error {
 		} else if task.Speed == consts.SlowSpeed.String() {
 			speed = consts.SlowSpeed
 		}
-		h := TaskHandler{speed: speed, inputImage: &inputImage, task: &task}
+		h := TaskHandler{speed: speed, inputImages: inputImages, task: &task}
 		h.enqueue()
 		logs.Logger.Info().Int("task_id", task.Id).Msg("Re-enqueued task")
 	}
@@ -91,14 +89,14 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 			return
 		}
 	}()
-	b, err := h.inputImageByte()
+	bs, err := h.inputImageBytes()
 	if err != nil {
 		return err
 	}
 	if h.speed == consts.SlowSpeed {
 		editRequest := gpt.SlowRequest{
-			ImageByte: b,
-			Prompt:    h.task.Prompt,
+			ImageBytes: bs,
+			Prompt:     h.task.Prompt,
 		}
 		h.imageResponse = gpt.SlowSpeed(editRequest)
 		err = h.endWork()
@@ -107,14 +105,10 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 		}
 	} else if h.speed == consts.FastSpeed {
 		editRequest := gpt.FastRequest{
-			ImageBytes: [][]byte{},
-			ImageURLs:  []string{},
+			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Quality:    h.task.Quality,
 			Size:       h.task.Size,
-		}
-		if b != nil && len(b) > 0 {
-			editRequest.ImageBytes = append(editRequest.ImageBytes, b)
 		}
 		h.imageResponse = gpt.FastSpeed(editRequest)
 		err = h.endWork()
@@ -124,41 +118,32 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 	}
 	return nil
 }
-func (h *TaskHandler) inputImageByte() (b []byte, err error) {
-	f, err := h.inputImageLocalFile()
-	if err == nil {
-		b, err = io.ReadAll(f)
-		if err == nil {
-			return
+func (h *TaskHandler) inputImageBytes() (ret [][]byte, err error) {
+	for _, img := range h.inputImages {
+		b, err := tools.ReadFile(filepath.Join(config.GConfig.LocalStorageDirectory, img.Path))
+		if err != nil {
+			logs.Logger.Err(err).Msg("Read-LocalFile")
+		} else {
+			ret = append(ret, b)
+			continue
 		}
+
+		if !config.GConfig.CloudStorageEnabled {
+			return nil, fmt.Errorf("cloud storage is not enabled, cannot get input image bytes")
+		}
+		url, err := ali.OssClient.URL(img.Key, time.Hour)
+		if err != nil {
+			logs.Logger.Err(err).Msg("Get-OSS-URL")
+			return nil, err
+		}
+		b, _, err = tools.GetOnlineImage(url)
+		if err != nil {
+			logs.Logger.Err(err).Msg("Get-OnlineImage")
+			return nil, err
+		}
+		ret = append(ret, b)
 	}
-	url, err := h.inputImageURL()
-	if err != nil {
-		return
-	}
-	b, _, err = tools.GetOnlineImage(url)
 	return
-}
-func (h *TaskHandler) inputImageLocalFile() (*os.File, error) {
-	absPath := filepath.Join(config.GConfig.LocalStorageDirectory, h.inputImage.Path)
-	f, err := os.Open(absPath)
-	if err != nil {
-		return nil, err
-	}
-	return f, nil
-}
-func (h *TaskHandler) inputImageURL() (string, error) {
-	if !config.GConfig.CloudStorageEnabled {
-		return "", fmt.Errorf("cloud storage is not enabled, cannot get input image URL")
-	}
-	if h.inputImage.Key == "" {
-		return "", fmt.Errorf("input image key is empty, cannot get URL")
-	}
-	url, err := ali.OssClient.URL(h.inputImage.Key, time.Hour)
-	if err != nil {
-		return "", err
-	}
-	return url, nil
 }
 func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 	now := time.Now()
@@ -178,14 +163,16 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 		return err
 	}
 	h.task = &taskRecord
-	taskImageRecord := model.TaskImage{
-		ImageId: form.GetImageId(),
-		TaskId:  taskRecord.Id,
-		Type:    model.TaskImageTypeInput.String(),
-	}
-	err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
-	if err != nil {
-		return err
+	for _, ii := range form.GetImageIds() {
+		taskImageR := model.TaskImage{
+			ImageId: ii,
+			TaskId:  taskRecord.Id,
+			Type:    model.TaskImageTypeInput.String(),
+		}
+		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageR).Error
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -381,14 +368,14 @@ func SlowSpeed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	var inputImage model.InputImage
-	err = mysql.DB.Model(&model.InputImage{}).Where("id = ?", form.ImageId).First(&inputImage).Error
+	iImages := make([]*model.InputImage, 0)
+	err = mysql.DB.Model(&model.InputImage{}).Where("id in (?)", form.GetImageIds()).Find(&iImages).Error
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-SlowSpeed")
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	h := TaskHandler{speed: consts.SlowSpeed, inputImage: &inputImage}
+	h := TaskHandler{speed: consts.SlowSpeed, inputImages: iImages}
 	err = h.createTaskRecord(&form)
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-SlowSpeed")
@@ -406,14 +393,14 @@ func FastSpeed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	var inputImage model.InputImage
-	err = mysql.DB.Model(&model.InputImage{}).Where("id = ?", form.ImageId).First(&inputImage).Error
+	iImages := make([]*model.InputImage, 0)
+	err = mysql.DB.Model(&model.InputImage{}).Where("id in (?)", form.GetImageIds()).Find(&iImages).Error
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-FastSpeed")
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	h := TaskHandler{speed: consts.FastSpeed, inputImage: &inputImage}
+	h := TaskHandler{speed: consts.FastSpeed, inputImages: iImages}
 	err = h.createTaskRecord(&form)
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-FastSpeed")
@@ -434,7 +421,6 @@ func TaskQuery(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
-	logs.Logger.Debug().Interface("tasks", tasks).Msg("Task-Query")
 	c.JSON(http.StatusOK, response.SuccessWithData(tasks))
 }
 

@@ -8,7 +8,6 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
-	"github.com/reusedev/draw-hub/tools"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -17,22 +16,12 @@ import (
 )
 
 type Image4oRequest struct {
-	Vip       bool   `json:"vip"`
-	ImageURL  string `json:"image_url"` // URL Bytes 二选一
-	ImageByte []byte `json:"image_byte"`
-	Prompt    string `json:"prompt"`
+	Vip        bool     `json:"vip"`
+	ImageBytes [][]byte `json:"image_bytes"`
+	Prompt     string   `json:"prompt"`
 }
 
 func (g *Image4oRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
-	var imageByte []byte
-	imageByte = g.ImageByte
-	if len(imageByte) == 0 {
-		b, _, err := tools.GetOnlineImage(g.ImageURL)
-		if err != nil {
-			return nil, "", err
-		}
-		imageByte = b
-	}
 	body := make(map[string]any)
 	body["model"] = "gpt-4o-image"
 	if g.Vip {
@@ -47,14 +36,17 @@ func (g *Image4oRequest) BodyContentType(supplier consts.ModelSupplier) (io.Read
 					"type": "text",
 					"text": g.Prompt,
 				},
-				{
-					"type": "image_url",
-					"image_url": map[string]string{
-						"url": "data:image/png;base64," + base64.StdEncoding.EncodeToString(imageByte),
-					},
-				},
 			},
 		},
+	}
+	for _, img := range g.ImageBytes {
+		imageByte := base64.StdEncoding.EncodeToString(img)
+		body["messages"].([]map[string]interface{})[0]["content"] = append(body["messages"].([]map[string]interface{})[0]["content"].([]map[string]interface{}), map[string]interface{}{
+			"type": "image_url",
+			"image_url": map[string]string{
+				"url": "data:image/png;base64," + imageByte,
+			},
+		})
 	}
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -81,7 +73,6 @@ func (g *Image4oRequest) InitResponse(supplier string, duration time.Duration, t
 }
 
 type Image1Request struct {
-	ImageURLs  []string `json:"image_urls"`
 	ImageBytes [][]byte `json:"image_bytes"`
 	Prompt     string   `json:"prompt"`
 	Quality    string   `json:"quality"`
@@ -94,11 +85,12 @@ func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reade
 		body["model"] = "gpt-image-1"
 		body["n"] = 1
 		body["prompt"] = g.Prompt
-		if len(g.ImageBytes) != 0 {
-			body["image"] = base64.StdEncoding.EncodeToString(g.ImageBytes[0])
-		} else if len(g.ImageURLs) != 0 {
-			body["image"] = g.ImageURLs[0]
+		var images []string
+		for _, img := range g.ImageBytes {
+			imageByte := base64.StdEncoding.EncodeToString(img)
+			images = append(images, imageByte)
 		}
+		body["image"] = images
 		if g.Size != "" {
 			body["size"] = g.Size
 		}
@@ -115,16 +107,15 @@ func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reade
 		payload := &bytes.Buffer{}
 		writer := multipart.NewWriter(payload)
 
-		for _, f := range g.ImageURLs {
-			imageBytes, fName, err := tools.GetOnlineImage(f)
+		for _, b := range g.ImageBytes {
 			header := make(textproto.MIMEHeader)
-			header.Set("Content-Type", http.DetectContentType(imageBytes))
-			header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="image"; filename="%s"`, fName))
+			header.Set("Content-Type", http.DetectContentType(b))
+			header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="image"; filename="%s"`, ""))
 			filePart, err := writer.CreatePart(header)
 			if err != nil {
 				return nil, "", err
 			}
-			_, err = filePart.Write(imageBytes)
+			_, err = filePart.Write(b)
 			if err != nil {
 				return nil, "", err
 			}

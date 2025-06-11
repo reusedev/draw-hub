@@ -35,11 +35,17 @@ func initRouter(e *gin.Engine) {
 	e.Use(gin.Recovery())
 	e.Use(middleware.RequestLogger())
 	v1 := e.Group("/v1")
+	v2 := e.Group("/v2")
 	task := v1.Group("/task")
 	{
 		task.POST("/slow", handler.SlowSpeed)
 		task.POST("/fast", handler.FastSpeed)
 		task.GET("", handler.TaskQuery)
+	}
+	taskV2 := v2.Group("/task")
+	{
+		taskV2.POST("/slow", handler.SlowSpeed)
+		taskV2.POST("/fast", handler.FastSpeed)
 	}
 	chat := v1.Group("/chat")
 	{
