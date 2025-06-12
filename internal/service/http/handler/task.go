@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -297,6 +298,7 @@ func (h *TaskHandler) endWork() error {
 	}
 
 	var succeed bool
+	errs := make([]error, 0)
 	for i, v := range h.imageResponse {
 		if v.Succeed() {
 			succeed = true
@@ -317,13 +319,25 @@ func (h *TaskHandler) endWork() error {
 			if err != nil {
 				return err
 			}
+		} else {
+			err := v.GetError()
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
-	// todo 总结失败原因
 	if !succeed {
+		var failReason string
+		for _, err := range errs {
+			if errors.Is(err, gpt.PromptError) {
+				failReason = "该任务的输入可能违反了相关服务政策，请调整提示词进行重试"
+				break
+			}
+		}
 		taskRecord := model.Task{
-			Id:     h.task.Id,
-			Status: model.TaskStatusFailed.String(),
+			Id:           h.task.Id,
+			Status:       model.TaskStatusFailed.String(),
+			FailedReason: failReason,
 		}
 		err := mysql.DB.Updates(&taskRecord).Error
 		if err != nil {

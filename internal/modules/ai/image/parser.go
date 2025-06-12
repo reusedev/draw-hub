@@ -15,8 +15,8 @@ type Response interface {
 	DurationMs() int64
 
 	Succeed() bool
-	GetBase64() []string
 	GetURLs() []string
+	GetError() error
 }
 
 type Parser interface {

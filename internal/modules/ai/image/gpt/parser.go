@@ -1,7 +1,9 @@
 package gpt
 
 import (
+	"errors"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"io"
@@ -40,6 +42,10 @@ func (g *Image4oParser) Parse(resp *http.Response, response image.Response) erro
 			Dur("duration", realResp.Duration).
 			Str("body", string(body)).
 			Msg("image resp error")
+		err := detectError(realResp.Supplier, realResp.Model, realResp.RespBody)
+		if err != nil {
+			realResp.Error = err
+		}
 	}
 	return nil
 }
@@ -80,6 +86,10 @@ func (g *Image1Parser) Parse(resp *http.Response, response image.Response) error
 			Dur("duration", realResp.Duration).
 			Str("body", string(body)).
 			Msg("image resp error")
+		err := detectError(realResp.Supplier, realResp.Model, realResp.RespBody)
+		if err != nil {
+			realResp.Error = err
+		}
 	}
 	return nil
 }
@@ -93,6 +103,7 @@ type Image4oResponse struct {
 	RespAt     time.Time     `json:"resp_at"`
 	Duration   time.Duration `json:"duration"`
 	URLs       []string      `json:"URLs"`
+	Error      error         `json:"error,omitempty"`
 }
 
 func (r *Image4oResponse) GetSupplier() string {
@@ -125,8 +136,8 @@ func (r *Image4oResponse) Succeed() bool {
 func (r *Image4oResponse) GetURLs() []string {
 	return r.URLs
 }
-func (r *Image4oResponse) GetBase64() []string {
-	return []string{}
+func (r *Image4oResponse) GetError() error {
+	return r.Error
 }
 
 type Image1Response struct {
@@ -139,6 +150,7 @@ type Image1Response struct {
 	Duration   time.Duration `json:"duration"`
 	Base64     []string      `json:"base64"`
 	URLs       []string      `json:"URLs"`
+	Error      error         `json:"error,omitempty"`
 }
 
 func (r *Image1Response) GetSupplier() string {
@@ -171,6 +183,38 @@ func (r *Image1Response) Succeed() bool {
 func (r *Image1Response) GetURLs() []string {
 	return r.URLs
 }
-func (r *Image1Response) GetBase64() []string {
-	return r.Base64
+func (r *Image1Response) GetError() error {
+	return r.Error
+}
+
+var (
+	PromptError = errors.New("system judge that the prompt is not suitable for image generation, please try again with a different prompt")
+)
+
+var (
+	errorMap = map[string]map[string]error{
+		consts.Tuzi.String() + consts.GPT4oImage.String(): {
+			"图片检测系统认为内容可能违反相关政策": PromptError,
+		},
+		consts.Tuzi.String() + consts.GPT4oImageVip.String(): {
+			"图片检测系统认为内容可能违反相关政策": PromptError,
+		},
+		consts.Geek.String() + consts.GPT4oImage.String(): {
+			"图片检测系统认为内容可能违反相关政策": PromptError,
+		},
+		consts.V3.String() + consts.GPT4oImageVip.String(): {
+			"该任务的输入或者输出可能违反了OpenAI的相关服务政策，请重新发起请求或调整提示词进行重试": PromptError,
+		},
+	}
+)
+
+func detectError(supplier, model, body string) error {
+	if errs, ok := errorMap[supplier+model]; ok {
+		for key, err := range errs {
+			if strings.Contains(body, key) {
+				return err
+			}
+		}
+	}
+	return nil
 }
