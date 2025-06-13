@@ -82,7 +82,7 @@ func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (resp
 		acl = s.outputImage.ACL
 		url = s.outputImage.URL
 	}
-	if request.Type == "output" && strings.HasSuffix(s.outputImage.ModelSupplierURL, ".png") {
+	if request.Type == "output" && strings.HasSuffix(s.outputImage.ModelSupplierURL, ".png") && s.outputImage.Type == model.OuputImageTypeNormal.String() {
 		ret.URL = s.outputImage.ModelSupplierURL
 		return ret, nil
 	}
