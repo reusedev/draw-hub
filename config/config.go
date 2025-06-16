@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"gopkg.in/yaml.v3"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -26,6 +27,7 @@ func initFromYaml(config []byte) {
 }
 
 type Config struct {
+	LocalStorageDomain    string `yaml:"local_storage_domain"`
 	LocalStorageDirectory string `yaml:"local_storage_directory"`
 	CloudStorageEnabled   bool   `yaml:"cloud_storage_enabled"`
 	CloudStorageSupplier  string `yaml:"cloud_storage_supplier"`
@@ -36,6 +38,9 @@ type Config struct {
 }
 
 func (c *Config) Verify() error {
+	if _, err := url.Parse(c.LocalStorageDomain); err != nil {
+		return fmt.Errorf("local_storage_domain is not a valid URL: %v", err)
+	}
 	if !strings.HasSuffix(c.LocalStorageDirectory, "/") {
 		return fmt.Errorf("local_storage_directory must end with '/'")
 	}

@@ -27,7 +27,11 @@ func NewStorageHandler() *StorageHandler {
 	return &StorageHandler{}
 }
 func (s *StorageHandler) InputImage() model.InputImage {
-	return s.inputImage
+	result := s.inputImage
+	if result.URL == "" {
+		result.URL = config.GConfig.LocalStorageDomain + "/" + strings.ReplaceAll(result.Path, string(filepath.Separator), "/")
+	}
+	return result
 }
 func (s *StorageHandler) OutputImage() model.OutputImage {
 	return s.outputImage
@@ -99,6 +103,7 @@ func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (resp
 		ret.URL = url
 		return ret, nil
 	}
+	ret.URL = config.GConfig.LocalStorageDomain + "/" + strings.ReplaceAll(ret.Path, string(filepath.Separator), "/")
 	return ret, nil
 }
 

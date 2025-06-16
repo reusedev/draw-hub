@@ -1,4 +1,6 @@
 ######## 文件存储服务 ########
+# 存储服务器域名
+local_storage_domain: "https://draw-hub.example.com"
 # 本地存储目录
 local_storage_directory: "storage/"
 # 云存储服务
