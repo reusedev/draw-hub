@@ -122,6 +122,15 @@ func (o *ossClient) Presign(key string, expire time.Duration) (*oss.PresignResul
 	return o.client.Presign(context.TODO(), request, oss.PresignExpires(expire))
 }
 
+func (o *ossClient) Resize50(key string, expire time.Duration) (*oss.PresignResult, error) {
+	request := &oss.GetObjectRequest{
+		Bucket:  oss.Ptr(o.bucketName),
+		Key:     oss.Ptr(key),
+		Process: oss.Ptr("image/resize,p_50"),
+	}
+	return o.client.Presign(context.TODO(), request, oss.PresignExpires(expire))
+}
+
 func (o *ossClient) upload(fName, key, acl string, reader io.Reader) error {
 	request := &oss.PutObjectRequest{
 		Bucket:             oss.Ptr(o.bucketName),

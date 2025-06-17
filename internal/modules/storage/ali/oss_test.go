@@ -34,11 +34,21 @@ func TestUpload(t *testing.T) {
 }
 
 func TestSignURL(t *testing.T) {
-	key := "cloud_test/draw_hub/test.txt"
+	key := "draw_hub/f0952f59-b6be-4f63-b5bb-b956c44ef4c7.jpeg"
 	url, err := OssClient.URL(key, time.Minute)
 	if err != nil {
 		t.Error(err)
 	} else {
 		t.Logf("PreSign URL: %s", url)
+	}
+}
+
+func TestThumbNailURL(t *testing.T) {
+	key := "draw_hub/f0952f59-b6be-4f63-b5bb-b956c44ef4c7.jpeg"
+	url, err := OssClient.Resize50(key, time.Minute)
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Logf("Thumbnail URL: %s", url)
 	}
 }
