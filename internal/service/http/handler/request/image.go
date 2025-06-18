@@ -43,9 +43,10 @@ func (u *UploadRequest) FullWithDefault() {
 }
 
 type GetImageRequest struct {
-	ID     int    `form:"id"`     // 图片 ID
-	Type   string `form:"type"`   // 图片类型，input 或 output
-	Expire string `form:"expire"` // 过期时间，默认 "168h"
+	ID        int    `form:"id"`        // 图片 ID
+	Type      string `form:"type"`      // 图片类型，input 或 output
+	Expire    string `form:"expire"`    // 过期时间，默认 "168h"
+	ThumbNail bool   `form:"thumbnail"` // 返回缩略图，仅对output有效
 }
 
 func (g *GetImageRequest) Valid() error {
@@ -59,6 +60,9 @@ func (g *GetImageRequest) Valid() error {
 		if _, err := time.ParseDuration(g.Expire); err != nil {
 			return fmt.Errorf("invalid expire duration: %s", g.Expire)
 		}
+	}
+	if g.Type != "output" && g.ThumbNail {
+		return fmt.Errorf("thumbnail option is only valid for output images")
 	}
 	return nil
 }

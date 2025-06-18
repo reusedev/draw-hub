@@ -23,6 +23,7 @@ import (
 	"github.com/reusedev/draw-hub/tools"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -198,8 +199,13 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 		if err != nil {
 			return err
 		}
+		thumbnailPath, err := saveThumbnailImage(imageBytes, h.task.CreatedAt, imageResp.GetSupplier())
+		if err != nil {
+			return err
+		}
 		imageRecord := model.OutputImage{
 			Path:              path,
+			ThumbNailPath:     thumbnailPath,
 			TTL:               0,
 			Type:              string(model.OuputImageTypeNormal),
 			ModelSupplierURL:  v,
@@ -243,8 +249,13 @@ func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 		if err != nil {
 			return err
 		}
+		thumbnailPath, err := saveCompressionThumbnailImage(imageBytes, 95, h.task.CreatedAt, imageResp.GetSupplier())
+		if err != nil {
+			return err
+		}
 		imageRecord := model.OutputImage{
 			Path:              path,
+			ThumbNailPath:     thumbnailPath,
 			TTL:               0,
 			Type:              string(model.OuputImageTypeCompressed),
 			CompressionRatio:  sql.NullFloat64{Valid: true, Float64: ratio},
@@ -299,12 +310,9 @@ func (h *TaskHandler) endWork() error {
 
 	var succeed bool
 	errs := make([]error, 0)
-	for i, v := range h.imageResponse {
+	for _, v := range h.imageResponse {
 		if v.Succeed() {
 			succeed = true
-			if i != len(h.imageResponse)-1 {
-				return fmt.Errorf("not the last response, but succeed. task_id: %d", h.task.Id)
-			}
 			err := h.createImageRecords(v)
 			if err != nil {
 				return err
@@ -439,7 +447,7 @@ func TaskQuery(c *gin.Context) {
 }
 
 func saveNormalImage(image []byte, t time.Time, supplier string) (relativePath string, err error) {
-	relativePath = filepath.Join("output", "o", t.Format("20060102"), supplier, uuid.New().String()+"."+tools.DetectImageType(image))
+	relativePath = filepath.Join("output", "o", t.Format("20060102"), supplier, uuid.New().String()+"."+tools.DetectImageType(image).String())
 	path := filepath.Join(config.GConfig.LocalStorageDirectory, relativePath)
 	err = local.SaveFile(bytes.NewReader(image), path)
 	return
@@ -451,9 +459,37 @@ func saveCompressionImage(image []byte, quality int, t time.Time, supplier strin
 		return
 	}
 	ratio = float64(len(compressionBytes)) / float64(len(image))
-	relativePath = filepath.Join("output", "c", t.Format("20060102"), supplier, uuid.New().String()+".jpeg")
+	relativePath = filepath.Join("output", "c", t.Format("20060102"), supplier, uuid.New().String()+"."+tools.DetectImageType(compressionBytes).String())
 	path := filepath.Join(config.GConfig.LocalStorageDirectory, relativePath)
 	err = local.SaveFile(bytes.NewReader(compressionBytes), path)
+	return
+}
+
+func saveThumbnailImage(image []byte, t time.Time, supplier string) (relativePath string, err error) {
+	format, err := tools.DetectImageType(image).ImagingFormat()
+	if err != nil {
+		return "", err
+	}
+	thumbnail, err := tools.Thumbnail(bytes.NewReader(image), 0.5, format)
+	relativePath = filepath.Join("output", "ot", t.Format("20060102"), supplier, uuid.New().String()+"."+strings.ToLower(format.String()))
+	path := filepath.Join(config.GConfig.LocalStorageDirectory, relativePath)
+	err = local.SaveFile(thumbnail, path)
+	return
+}
+
+func saveCompressionThumbnailImage(image []byte, quality int, t time.Time, supplier string) (relativePath string, err error) {
+	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(image, quality)
+	if err != nil {
+		return
+	}
+	format, err := tools.DetectImageType(compressionBytes).ImagingFormat()
+	if err != nil {
+		return "", err
+	}
+	thumbnail, err := tools.Thumbnail(bytes.NewReader(compressionBytes), 0.5, format)
+	relativePath = filepath.Join("output", "ct", t.Format("20060102"), supplier, uuid.New().String()+"."+strings.ToLower(format.String()))
+	path := filepath.Join(config.GConfig.LocalStorageDirectory, relativePath)
+	err = local.SaveFile(thumbnail, path)
 	return
 }
 

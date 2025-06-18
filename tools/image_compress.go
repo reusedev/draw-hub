@@ -8,7 +8,7 @@ import (
 )
 
 func ConvertAndCompressPNGtoJPEG(srcData []byte, quality int) ([]byte, error) {
-	if DetectImageType(srcData) != "png" {
+	if DetectImageType(srcData).String() != "png" {
 		return nil, fmt.Errorf("not a PNG image")
 	}
 	// 解码PNG图像

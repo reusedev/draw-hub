@@ -86,11 +86,20 @@ func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (resp
 		acl = s.outputImage.ACL
 		url = s.outputImage.URL
 	}
-	if request.Type == "output" && strings.HasSuffix(s.outputImage.ModelSupplierURL, ".png") && s.outputImage.Type == model.OuputImageTypeNormal.String() {
+	if !request.ThumbNail && request.Type == "output" && strings.HasSuffix(s.outputImage.ModelSupplierURL, ".png") && s.outputImage.Type == model.OuputImageTypeNormal.String() {
 		ret.URL = s.outputImage.ModelSupplierURL
 		return ret, nil
 	}
 	if config.GConfig.CloudStorageEnabled {
+		if request.ThumbNail {
+			d, _ := time.ParseDuration(config.GConfig.URLExpires)
+			ossURL, err := ali.OssClient.Resize50(key, d)
+			if err != nil {
+				return ret, err
+			}
+			ret.URL = ossURL.URL
+			return ret, nil
+		}
 		if acl == "private" {
 			d, _ := time.ParseDuration(config.GConfig.URLExpires)
 			ossURL, err := ali.OssClient.URL(key, d)
@@ -102,6 +111,13 @@ func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (resp
 		}
 		ret.URL = url
 		return ret, nil
+	}
+	if request.ThumbNail {
+		if s.outputImage.ThumbNailPath != "" {
+			ret.Path = s.outputImage.ThumbNailPath
+			ret.URL = config.GConfig.LocalStorageDomain + "/" + strings.ReplaceAll(ret.Path, string(filepath.Separator), "/")
+			return ret, nil
+		}
 	}
 	ret.URL = config.GConfig.LocalStorageDomain + "/" + strings.ReplaceAll(ret.Path, string(filepath.Separator), "/")
 	return ret, nil

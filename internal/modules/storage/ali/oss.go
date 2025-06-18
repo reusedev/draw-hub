@@ -97,7 +97,7 @@ func (o *ossClient) UploadFile(request *UploadRequest) (OSSObject, error) {
 }
 
 func (o *ossClient) UploadPrivateImage(b []byte) (string, error) {
-	fName := uuid.New().String() + "." + tools.DetectImageType(b)
+	fName := uuid.New().String() + "." + tools.DetectImageType(b).String()
 	key := o.fullPath(fName)
 	return key, o.upload(fName, key, string(oss.ObjectACLPrivate), bytes.NewReader(b))
 }

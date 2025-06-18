@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"github.com/disintegration/imaging"
 	"io"
 	"net/http"
 	"strings"
@@ -39,17 +40,41 @@ func GetOnlineImage(url string) (bytes []byte, fName string, err error) {
 	return
 }
 
-func DetectImageType(data []byte) string {
+type ImageType string
+
+const (
+	ImageTypeJPEG    ImageType = "jpeg"
+	ImageTypePNG     ImageType = "png"
+	ImageTypeGIF     ImageType = "gif"
+	ImageTypeWEBP    ImageType = "webp"
+	ImageTypeUnknown ImageType = "unknown"
+)
+
+func (i ImageType) String() string {
+	return string(i)
+}
+
+func (i ImageType) ImagingFormat() (imaging.Format, error) {
+	if i == ImageTypeJPEG {
+		return imaging.JPEG, nil
+	} else if i == ImageTypePNG {
+		return imaging.PNG, nil
+	} else {
+		return imaging.Format(-1), fmt.Errorf("unsupported image type: %s", i)
+	}
+}
+
+func DetectImageType(data []byte) ImageType {
 	switch http.DetectContentType(data) {
 	case "image/jpeg":
-		return "jpeg"
+		return ImageTypeJPEG
 	case "image/png":
-		return "png"
+		return ImageTypePNG
 	case "image/gif":
-		return "gif"
+		return ImageTypeGIF
 	case "image/webp":
-		return "webp"
+		return ImageTypeWEBP
 	default:
-		return "unknown"
+		return ImageTypeUnknown
 	}
 }
