@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/components/mysql"
+	"github.com/reusedev/draw-hub/internal/modules/cache"
 	"github.com/reusedev/draw-hub/internal/modules/dao"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/model"
@@ -19,12 +20,15 @@ import (
 )
 
 type StorageHandler struct {
+	cache       *cache.Manager[string]
 	inputImage  model.InputImage
 	outputImage model.OutputImage
 }
 
 func NewStorageHandler() *StorageHandler {
-	return &StorageHandler{}
+	return &StorageHandler{
+		cache: cache.ImageCacheManager(),
+	}
 }
 func (s *StorageHandler) InputImage() model.InputImage {
 	result := s.inputImage
@@ -48,12 +52,42 @@ func (s *StorageHandler) Upload(request request.UploadRequest) error {
 	}
 	return nil
 }
-func (s *StorageHandler) Query(request request.GetImageRequest) (response.GetImage, error) {
-	err := s.selectImage(request)
+
+func (s *StorageHandler) Query(req request.GetImageRequest) (response.GetImage, error) {
+	if req.Expire == request.ExpireDefault {
+		key := req.CacheKey()
+		v, err := s.cache.GetValue(key)
+		if v != "" && err == nil {
+			ret, err := response.UnmarshalGetImage(v)
+			if err == nil {
+				return *ret, nil
+			}
+		}
+	}
+	ret, err := s.query(req)
 	if err != nil {
 		return response.GetImage{}, err
 	}
-	return s.getImageResponse(request)
+	if req.Expire == request.ExpireDefault {
+		key := req.CacheKey()
+		value, err := ret.Marsh()
+		if err != nil {
+			return ret, nil
+		}
+		err = s.cache.SetWithExpiration(key, value, time.Hour)
+		if err != nil {
+			logs.Logger.Err(err).Msg("Image-Cache-Set")
+			return ret, err
+		}
+	}
+	return ret, nil
+}
+func (s *StorageHandler) query(req request.GetImageRequest) (response.GetImage, error) {
+	err := s.selectImage(req)
+	if err != nil {
+		return response.GetImage{}, err
+	}
+	return s.getImageResponse(req)
 }
 
 func (s *StorageHandler) selectImage(request request.GetImageRequest) error {

@@ -13,6 +13,8 @@ type UploadRequest struct {
 	Expire string                `form:"expire"`                  // 过期时间，默认 "168h"
 }
 
+const ExpireDefault = "168h" // 默认过期时间为 7 天
+
 func (u *UploadRequest) Valid() error {
 	file, err := u.File.Open()
 	if err != nil {
@@ -38,7 +40,7 @@ func (u *UploadRequest) FullWithDefault() {
 		u.ACL = "public-read"
 	}
 	if u.Expire == "" {
-		u.Expire = "168h" // 默认 7 天
+		u.Expire = ExpireDefault
 	}
 }
 
@@ -47,6 +49,10 @@ type GetImageRequest struct {
 	Type      string `form:"type"`      // 图片类型，input 或 output
 	Expire    string `form:"expire"`    // 过期时间，默认 "168h"
 	ThumbNail bool   `form:"thumbnail"` // 返回缩略图，仅对output有效
+}
+
+func (g *GetImageRequest) CacheKey() string {
+	return fmt.Sprintf("image_get_%d_%s_%s_%v", g.ID, g.Type, g.Expire, g.ThumbNail)
 }
 
 func (g *GetImageRequest) Valid() error {
@@ -69,6 +75,6 @@ func (g *GetImageRequest) Valid() error {
 
 func (g *GetImageRequest) FullWithDefault() {
 	if g.Expire == "" {
-		g.Expire = "168h" // 默认 7 天
+		g.Expire = ExpireDefault
 	}
 }
