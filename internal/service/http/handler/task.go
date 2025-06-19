@@ -72,6 +72,14 @@ func (h *TaskHandler) enqueue() {
 	queue.ImageTaskQueue <- h
 }
 
+func (h *TaskHandler) Fail(err error) {
+	logs.Logger.Err(err).Msg("task-Failed")
+	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
+		"status":        model.TaskStatusFailed.String(),
+		"failed_reason": "处理任务结果时发生错误",
+	})
+}
+
 func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
 		"status": model.TaskStatusRunning.String(),
@@ -103,7 +111,7 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 		h.imageResponse = gpt.SlowSpeed(editRequest)
 		err = h.endWork()
 		if err != nil {
-			logs.Logger.Err(err).Msg("task-SlowSpeed")
+			return err
 		}
 	} else if h.speed == consts.FastSpeed {
 		editRequest := gpt.FastRequest{
@@ -115,7 +123,7 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 		h.imageResponse = gpt.FastSpeed(editRequest)
 		err = h.endWork()
 		if err != nil {
-			logs.Logger.Err(err).Msg("task-FastSpeed")
+			return err
 		}
 	}
 	return nil

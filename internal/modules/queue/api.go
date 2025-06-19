@@ -18,7 +18,7 @@ func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
 				go func() {
 					err := task.Execute(ctx, wg)
 					if err != nil {
-						logs.Logger.Err(err).Msg("Image task execution failed")
+						task.Fail(err)
 					}
 				}()
 			} else {
