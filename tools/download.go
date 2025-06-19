@@ -6,14 +6,26 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func GetOnlineImage(url string) (bytes []byte, fName string, err error) {
-	client := http.Client{}
-	req, err := http.NewRequest("GET", url, nil)
+	retry := 3
+label:
+	retry--
+	bytes, fName, err = getOnlineImage(url)
 	if err != nil {
-		return
+		if retry > 0 {
+			time.Sleep(time.Second)
+			goto label
+		}
 	}
+	return
+}
+
+func getOnlineImage(url string) (bytes []byte, fName string, err error) {
+	client := http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		return
@@ -23,7 +35,6 @@ func GetOnlineImage(url string) (bytes []byte, fName string, err error) {
 		err = fmt.Errorf("failed to download image, status code: %d", resp.StatusCode)
 		return
 	}
-
 	bytes, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return
