@@ -124,7 +124,7 @@ func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (resp
 		ret.URL = s.outputImage.ModelSupplierURL
 		return ret, nil
 	}
-	if config.GConfig.CloudStorageEnabled {
+	if config.GConfig.CloudStorageEnabled && key != "" {
 		if request.ThumbNail {
 			d, _ := time.ParseDuration(config.GConfig.URLExpires)
 			ossURL, err := ali.OssClient.Resize50(key, d)
