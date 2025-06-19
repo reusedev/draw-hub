@@ -76,7 +76,7 @@ func (h *TaskHandler) Fail(err error) {
 	logs.Logger.Err(err).Msg("task-Failed")
 	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
 		"status":        model.TaskStatusFailed.String(),
-		"failed_reason": "处理任务结果时发生错误",
+		"failed_reason": "任务执行失败，请稍后重试",
 	})
 }
 
