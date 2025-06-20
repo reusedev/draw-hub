@@ -45,6 +45,7 @@ func initRouter(e *gin.Engine) {
 	taskV2 := v2.Group("/task")
 	{
 		taskV2.POST("/slow", handler.SlowSpeed)
+		taskV2.POST("/slow/4oVip-four", handler.SlowSpeed)
 		taskV2.POST("/fast", handler.FastSpeed)
 	}
 	chat := v1.Group("/chat")

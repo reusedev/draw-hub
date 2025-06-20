@@ -30,6 +30,7 @@ import (
 
 type TaskHandler struct {
 	speed         consts.TaskSpeed
+	model         consts.Model
 	inputImages   []*model.InputImage
 	task          *model.Task
 	imageResponse []image.Response
@@ -107,6 +108,7 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 		editRequest := gpt.SlowRequest{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
+			Model:      h.task.Model,
 		}
 		h.imageResponse = gpt.SlowSpeed(editRequest)
 		err = h.endWork()
@@ -162,6 +164,7 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 		Type:        model.TaskTypeEdit.String(),
 		Prompt:      form.GetPrompt(),
 		Speed:       form.GetSpeed(),
+		Model:       h.model.String(),
 		Status:      model.TaskStatusPending.String(),
 		Quality:     form.GetQuality(),
 		Size:        form.GetSize(),
@@ -406,6 +409,10 @@ func SlowSpeed(c *gin.Context) {
 		return
 	}
 	h := TaskHandler{speed: consts.SlowSpeed, inputImages: iImages}
+	if c.FullPath() == "/v2/task/slow/4oVip-four" {
+		form.Prompt += consts.FourImagePrompt
+		h.model = consts.GPT4oImageVip
+	}
 	err = h.createTaskRecord(&form)
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-SlowSpeed")

@@ -40,3 +40,7 @@ const (
 func (s TaskSpeed) String() string {
 	return string(s)
 }
+
+const (
+	FourImagePrompt = "请返回4张图片"
+)

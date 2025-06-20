@@ -24,13 +24,15 @@ func (g *Image4oParser) Parse(resp *http.Response, response image.Response) erro
 	}
 	realResp.RespBody = string(body)
 	realResp.RespAt = time.Now()
-	reg := `]\((https?[^)]+)\)`
+	reg := `(https?[^)]+)\)\\n\\n\[点击下载\]`
 	pattern, _ := regexp.Compile(reg)
 	matches := pattern.FindAllStringSubmatch(string(body), -1)
-	if len(matches) > 0 && len(matches[len(matches)-1]) >= 2 {
-		url := matches[len(matches)-1][1]
-		url = strings.ReplaceAll(url, "\\u0026", "&")
-		realResp.URLs = append(realResp.URLs, url)
+	for _, match := range matches {
+		if len(match) >= 2 {
+			url := match[1]
+			url = strings.ReplaceAll(url, "\\u0026", "&")
+			realResp.URLs = append(realResp.URLs, url)
+		}
 	}
 	if !realResp.Succeed() {
 		logs.Logger.Warn().Str("supplier", realResp.Supplier).

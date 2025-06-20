@@ -17,6 +17,7 @@ type FastRequest struct {
 type SlowRequest struct {
 	ImageBytes [][]byte `json:"image_bytes"`
 	Prompt     string   `json:"prompt"`
+	Model      string   `json:"model"`
 }
 
 func SlowSpeed(request SlowRequest) []image.Response {
@@ -25,6 +26,9 @@ func SlowSpeed(request SlowRequest) []image.Response {
 		content := Image4oRequest{
 			ImageBytes: request.ImageBytes,
 			Prompt:     request.Prompt,
+		}
+		if request.Model != "" && order.Model != request.Model {
+			continue
 		}
 		if order.Model == consts.GPT4oImageVip.String() {
 			content.Vip = true
