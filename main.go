@@ -30,7 +30,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	config.Init(tools.ReadFileOrPanic(configPath))
+	config.Init(tools.PanicOnError(tools.ReadFile(configPath)))
 	logs.InitLogger()
 	syscall.Umask(0007)
 	ctx, cancel := context.WithCancel(context.Background())
