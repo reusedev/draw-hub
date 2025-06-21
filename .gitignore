@@ -11,3 +11,5 @@ draw-hub-*
 .idea
 .DS_Store
 
+config.test.yml
+deploy-test.sh
