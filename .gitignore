@@ -13,3 +13,4 @@ draw-hub-*
 
 config.test.yml
 deploy-test.sh
+draw-test-*
