@@ -1,3 +1,12 @@
+######## 日志配置 ########
+# 日志级别: trace, debug, info, warn, error, fatal, panic
+# 生产环境建议使用 info 或以上级别
+log_level: "debug"  # 开发环境使用debug，生产环境建议使用info
+log_file: "draw_hub.logs"
+log_max_size: 10    # 单个日志文件最大大小（MB）
+log_max_backups: 5  # 保留旧日志文件的最大数量
+log_max_age: 30     # 日志文件保留的最大天数
+
 ######## 文件存储服务 ########
 # 存储服务器域名
 local_storage_domain: "https://draw-hub.example.com"

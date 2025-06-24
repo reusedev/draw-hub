@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/reusedev/draw-hub/internal/consts"
-	"gopkg.in/yaml.v3"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/reusedev/draw-hub/internal/consts"
+	"gopkg.in/yaml.v3"
 )
 
 var GConfig *Config
@@ -27,6 +28,13 @@ func initFromYaml(config []byte) {
 }
 
 type Config struct {
+	// 日志配置
+	LogLevel      string `yaml:"log_level"`
+	LogFile       string `yaml:"log_file"`
+	LogMaxSize    int    `yaml:"log_max_size"`
+	LogMaxBackups int    `yaml:"log_max_backups"`
+	LogMaxAge     int    `yaml:"log_max_age"`
+
 	LocalStorageDomain    string `yaml:"local_storage_domain"`
 	LocalStorageDirectory string `yaml:"local_storage_directory"`
 	CloudStorageEnabled   bool   `yaml:"cloud_storage_enabled"`
@@ -38,6 +46,19 @@ type Config struct {
 }
 
 func (c *Config) Verify() error {
+	// 验证日志级别
+	validLogLevels := []string{"trace", "debug", "info", "warn", "error", "fatal", "panic"}
+	logLevelValid := false
+	for _, level := range validLogLevels {
+		if c.LogLevel == level {
+			logLevelValid = true
+			break
+		}
+	}
+	if !logLevelValid {
+		return fmt.Errorf("log_level must be one of: %v", validLogLevels)
+	}
+
 	if _, err := url.Parse(c.LocalStorageDomain); err != nil {
 		return fmt.Errorf("local_storage_domain is not a valid URL: %v", err)
 	}
