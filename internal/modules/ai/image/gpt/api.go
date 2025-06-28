@@ -24,15 +24,13 @@ type SlowRequest struct {
 func SlowSpeed(request SlowRequest) []image.Response {
 	ret := make([]image.Response, 0)
 	for _, order := range config.GConfig.RequestOrder.SlowSpeed {
-		content := Image4oRequest{
-			ImageBytes: request.ImageBytes,
-			Prompt:     request.Prompt,
-		}
 		if request.Model != "" && order.Model != request.Model {
 			continue
 		}
-		if order.Model == consts.GPT4oImageVip.String() {
-			content.Vip = true
+		content := Image4oRequest{
+			ImageBytes: request.ImageBytes,
+			Prompt:     request.Prompt,
+			Model:      order.Model,
 		}
 		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, &Image4oParser{})
 		response, err := requester.Do()

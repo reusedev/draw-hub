@@ -16,17 +16,14 @@ import (
 )
 
 type Image4oRequest struct {
-	Vip        bool     `json:"vip"`
+	Model      string   `json:"model"`
 	ImageBytes [][]byte `json:"image_bytes"`
 	Prompt     string   `json:"prompt"`
 }
 
 func (g *Image4oRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
 	body := make(map[string]any)
-	body["model"] = "gpt-4o-image"
-	if g.Vip {
-		body["model"] = "gpt-4o-image-vip"
-	}
+	body["model"] = g.Model
 	body["stream"] = false
 	body["messages"] = []map[string]interface{}{
 		{
@@ -64,11 +61,7 @@ func (g *Image4oRequest) InitResponse(supplier string, duration time.Duration, t
 		Duration:  duration,
 		URLs:      []string{},
 	}
-	if g.Vip {
-		ret.Model = consts.GPT4oImageVip.String()
-	} else {
-		ret.Model = consts.GPT4oImage.String()
-	}
+	ret.Model = g.Model
 	return ret
 }
 
