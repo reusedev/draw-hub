@@ -1,7 +1,7 @@
 package image
 
 import (
-	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/http_client"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/tools"
@@ -10,21 +10,12 @@ import (
 )
 
 type Requester struct {
-	token        Token
+	token        ai.Token
 	RequestTypes RequestContent
 	Parser       Parser
 }
-type Token struct {
-	Token    string
-	Desc     string
-	Supplier consts.ModelSupplier
-}
 
-func (t *Token) GetSupplier() consts.ModelSupplier {
-	return t.Supplier
-}
-
-func NewRequester(token Token, requestTypes RequestContent, parser Parser) *Requester {
+func NewRequester(token ai.Token, requestTypes RequestContent, parser Parser) *Requester {
 	return &Requester{
 		token:        token,
 		RequestTypes: requestTypes,
