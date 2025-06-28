@@ -20,6 +20,10 @@ type Token struct {
 	Supplier consts.ModelSupplier
 }
 
+func (t *Token) GetSupplier() consts.ModelSupplier {
+	return t.Supplier
+}
+
 func NewRequester(token Token, requestTypes RequestContent, parser Parser) *Requester {
 	return &Requester{
 		token:        token,
@@ -36,7 +40,7 @@ func (r *Requester) Do() (Response, error) {
 	}
 	req, err := client.NewRequest(
 		http.MethodPost,
-		tools.FullURL(tools.BaseURLBySupplier(r.token.Supplier), r.RequestTypes.Path()),
+		tools.FullURL(r.token.GetSupplier().BaseURL(), r.RequestTypes.Path()),
 		http_client.WithHeader("Authorization", "Bearer "+r.token.Token),
 		http_client.WithHeader("Content-Type", contentType),
 		http_client.WithBody(body),

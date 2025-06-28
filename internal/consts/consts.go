@@ -1,11 +1,5 @@
 package consts
 
-const (
-	GeekBaseURL = "https://geekai.co/api"
-	TuziBaseURL = "https://api.tu-zi.com"
-	V3BaseUrl   = "https://api.gpt.ge"
-)
-
 type ModelSupplier string
 
 const (
@@ -16,6 +10,19 @@ const (
 
 func (m ModelSupplier) String() string {
 	return string(m)
+}
+
+func (m ModelSupplier) BaseURL() string {
+	switch m {
+	case Geek:
+		return "https://geekai.co/api"
+	case Tuzi:
+		return "https://api.tu-zi.com"
+	case V3:
+		return "https://api.gpt.ge"
+	default:
+		return ""
+	}
 }
 
 type Model string
