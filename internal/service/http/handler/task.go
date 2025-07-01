@@ -349,7 +349,7 @@ func (h *TaskHandler) endWork() error {
 		var failReason string
 		for _, err := range errs {
 			if errors.Is(err, gpt.PromptError) {
-				failReason = "该任务的输入可能违反了相关服务政策，请调整提示词进行重试"
+				failReason = "该任务的输入可能违反了相关服务政策，请调整后进行重试"
 				break
 			}
 		}
