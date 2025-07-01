@@ -1,10 +1,12 @@
 package request
 
+import "github.com/reusedev/draw-hub/internal/consts"
+
 type TaskForm interface {
 	GetGroupId() string
 	GetImageIds() []int
 	GetPrompt() string
-	GetSpeed() string
+	GetSpeed() consts.TaskSpeed
 	GetQuality() string
 	GetSize() string
 }
@@ -34,8 +36,8 @@ func (s *SlowTask) GetQuality() string {
 func (s *SlowTask) GetSize() string {
 	return ""
 }
-func (s *SlowTask) GetSpeed() string {
-	return "slow"
+func (s *SlowTask) GetSpeed() consts.TaskSpeed {
+	return consts.SlowSpeed
 }
 
 type FastSpeed struct {
@@ -65,6 +67,6 @@ func (s *FastSpeed) GetQuality() string {
 func (s *FastSpeed) GetSize() string {
 	return s.Size
 }
-func (s *FastSpeed) GetSpeed() string {
-	return "fast"
+func (s *FastSpeed) GetSpeed() consts.TaskSpeed {
+	return consts.FastSpeed
 }

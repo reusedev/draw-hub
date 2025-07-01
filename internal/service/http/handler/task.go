@@ -36,6 +36,23 @@ type TaskHandler struct {
 	imageResponse []image.Response
 }
 
+func newTaskHandler(c *gin.Context, form request.TaskForm) (*TaskHandler, error) {
+	h := &TaskHandler{
+		speed:       form.GetSpeed(),
+		inputImages: make([]*model.InputImage, 0),
+	}
+	err := mysql.DB.Model(&model.InputImage{}).
+		Where("id in (?)", form.GetImageIds()).
+		Find(&h.inputImages).Error
+	if err != nil {
+		return nil, err
+	}
+	if c.FullPath() == "/v2/task/slow/4oVip-four" {
+		h.model = consts.GPT4oImageVip
+	}
+	return h, nil
+}
+
 func EnqueueUnfinishedTask() error {
 	tasks := make([]model.Task, 0)
 	err := mysql.DB.Model(&model.Task{}).
@@ -163,7 +180,7 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 		TaskGroupId: form.GetGroupId(),
 		Type:        model.TaskTypeEdit.String(),
 		Prompt:      form.GetPrompt(),
-		Speed:       form.GetSpeed(),
+		Speed:       form.GetSpeed().String(),
 		Model:       h.model.String(),
 		Status:      model.TaskStatusPending.String(),
 		Quality:     form.GetQuality(),
@@ -301,7 +318,7 @@ func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 	return nil
 }
 
-func (h *TaskHandler) endWork() error {
+func (h *TaskHandler) recordSupplierInvoke() error {
 	for _, v := range h.imageResponse {
 		exeRecord := model.SupplierInvokeHistory{
 			TaskId:         h.task.Id,
@@ -317,6 +334,14 @@ func (h *TaskHandler) endWork() error {
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (h *TaskHandler) endWork() error {
+	err := h.recordSupplierInvoke()
+	if err != nil {
+		return err
 	}
 
 	var succeed bool
@@ -401,17 +426,13 @@ func SlowSpeed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	iImages := make([]*model.InputImage, 0)
-	err = mysql.DB.Model(&model.InputImage{}).Where("id in (?)", form.GetImageIds()).Find(&iImages).Error
-	if err != nil {
-		logs.Logger.Err(err).Msg("task-SlowSpeed")
-		c.JSON(http.StatusBadRequest, response.ParamError)
-		return
-	}
-	h := TaskHandler{speed: consts.SlowSpeed, inputImages: iImages}
 	if c.FullPath() == "/v2/task/slow/4oVip-four" {
 		form.Prompt += consts.FourImagePrompt
-		h.model = consts.GPT4oImageVip
+	}
+	h, err := newTaskHandler(c, &form)
+	if err != nil {
+		logs.Logger.Err(err).Msg("task-SlowSpeed-NewTaskHandler")
+		c.JSON(http.StatusInternalServerError, response.ParamError)
 	}
 	err = h.createTaskRecord(&form)
 	if err != nil {
@@ -430,14 +451,12 @@ func FastSpeed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	iImages := make([]*model.InputImage, 0)
-	err = mysql.DB.Model(&model.InputImage{}).Where("id in (?)", form.GetImageIds()).Find(&iImages).Error
+	h, err := newTaskHandler(c, &form)
 	if err != nil {
-		logs.Logger.Err(err).Msg("task-FastSpeed")
-		c.JSON(http.StatusBadRequest, response.ParamError)
+		logs.Logger.Err(err).Msg("task-FastSpeed-NewTaskHandler")
+		c.JSON(http.StatusInternalServerError, response.ParamError)
 		return
 	}
-	h := TaskHandler{speed: consts.FastSpeed, inputImages: iImages}
 	err = h.createTaskRecord(&form)
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-FastSpeed")
