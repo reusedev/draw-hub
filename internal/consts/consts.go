@@ -49,5 +49,5 @@ func (s TaskSpeed) String() string {
 }
 
 const (
-	FourImagePrompt = "请返回4张图片"
+	FourImagePrompt = "\n请一定返回4张图片.Please do return four images."
 )
