@@ -427,7 +427,7 @@ func SlowSpeed(c *gin.Context) {
 		return
 	}
 	if c.FullPath() == "/v2/task/slow/4oVip-four" {
-		form.Prompt += consts.FourImagePrompt
+		form.Prompt = consts.FourImagePrompt + form.Prompt + consts.FourImagePrompt
 	}
 	h, err := newTaskHandler(c, &form)
 	if err != nil {
