@@ -2,15 +2,16 @@ package gpt
 
 import (
 	"errors"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/reusedev/draw-hub/internal/consts"
-	"github.com/reusedev/draw-hub/internal/modules/ai/image"
-	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
+	"github.com/reusedev/draw-hub/internal/modules/logs"
 )
 
 type Image4oParser struct{}
@@ -24,14 +25,40 @@ func (g *Image4oParser) Parse(resp *http.Response, response image.Response) erro
 	}
 	realResp.RespBody = string(body)
 	realResp.RespAt = time.Now()
-	reg := `(https?[^)]+)\)\\n\\n\[点击下载\]`
-	pattern, _ := regexp.Compile(reg)
-	matches := pattern.FindAllStringSubmatch(string(body), -1)
-	for _, match := range matches {
-		if len(match) >= 2 {
-			url := match[1]
-			url = strings.ReplaceAll(url, "\\u0026", "&")
-			realResp.URLs = append(realResp.URLs, url)
+
+	// 首先尝试解析JSON格式的聊天完成响应
+	var chatResp struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+
+	if err := jsoniter.Unmarshal(body, &chatResp); err == nil && len(chatResp.Choices) > 0 {
+		// 从Markdown格式中提取图片URL
+		content := chatResp.Choices[0].Message.Content
+		markdownReg := `!\[.*?\]\((https?://[^)]+)\)`
+		pattern, _ := regexp.Compile(markdownReg)
+		matches := pattern.FindAllStringSubmatch(content, -1)
+		for _, match := range matches {
+			if len(match) >= 2 {
+				url := match[1]
+				url = strings.ReplaceAll(url, "\\u0026", "&")
+				realResp.URLs = append(realResp.URLs, url)
+			}
+		}
+	} else {
+		// 如果JSON解析失败，尝试原来的正则表达式
+		reg := `(https?[^)]+)\)\\n\\n\[点击下载\]`
+		pattern, _ := regexp.Compile(reg)
+		matches := pattern.FindAllStringSubmatch(string(body), -1)
+		for _, match := range matches {
+			if len(match) >= 2 {
+				url := match[1]
+				url = strings.ReplaceAll(url, "\\u0026", "&")
+				realResp.URLs = append(realResp.URLs, url)
+			}
 		}
 	}
 	if !realResp.Succeed() {
