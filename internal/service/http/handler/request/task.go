@@ -3,6 +3,7 @@ package request
 import "github.com/reusedev/draw-hub/internal/consts"
 
 type TaskForm interface {
+	GetImageOrigin() string
 	GetGroupId() string
 	GetImageIds() []int
 	GetPrompt() string
@@ -12,12 +13,16 @@ type TaskForm interface {
 }
 
 type SlowTask struct {
-	GroupId  string `form:"group_id"`
-	ImageId  int    `form:"image_id"`
-	ImageIds []int  `form:"image_ids"`
-	Prompt   string `form:"prompt"`
+	ImageType string `form:"image_type"`
+	GroupId   string `form:"group_id"`
+	ImageId   int    `form:"image_id"`
+	ImageIds  []int  `form:"image_ids"`
+	Prompt    string `form:"prompt"`
 }
 
+func (s *SlowTask) GetImageOrigin() string {
+	return s.ImageType
+}
 func (s *SlowTask) GetGroupId() string {
 	return s.GroupId
 }
@@ -41,14 +46,18 @@ func (s *SlowTask) GetSpeed() consts.TaskSpeed {
 }
 
 type FastSpeed struct {
-	GroupId  string `form:"group_id"`
-	ImageId  int    `form:"image_id"`
-	ImageIds []int  `form:"image_ids"`
-	Prompt   string `form:"prompt"`
-	Quality  string `form:"quality"`
-	Size     string `form:"size"`
+	ImageType string `form:"image_type"`
+	GroupId   string `form:"group_id"`
+	ImageId   int    `form:"image_id"`
+	ImageIds  []int  `form:"image_ids"`
+	Prompt    string `form:"prompt"`
+	Quality   string `form:"quality"`
+	Size      string `form:"size"`
 }
 
+func (s *FastSpeed) GetImageOrigin() string {
+	return s.ImageType
+}
 func (s *FastSpeed) GetGroupId() string {
 	return s.GroupId
 }

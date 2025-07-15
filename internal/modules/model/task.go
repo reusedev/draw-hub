@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type Task struct {
 	Id           int         `json:"id" gorm:"primaryKey"`
@@ -66,11 +69,12 @@ func (SupplierInvokeHistory) TableName() string {
 }
 
 type TaskImage struct {
-	TaskId      int         `json:"task_id" gorm:"column:task_id;type:int;primaryKey"`
-	ImageId     int         `json:"image_id" gorm:"column:image_id;type:int;primaryKey"`
-	Type        string      `json:"type" gorm:"column:type;type:enum('input', 'output');primaryKey"`
-	InputImage  InputImage  `json:"input_image" gorm:"foreignKey:ImageId;references:Id"`
-	OutputImage OutputImage `json:"output_image" gorm:"foreignKey:ImageId;references:Id"`
+	TaskId      int            `json:"task_id" gorm:"column:task_id;type:int;primaryKey"`
+	ImageId     int            `json:"image_id" gorm:"column:image_id;type:int;primaryKey"`
+	Type        string         `json:"type" gorm:"column:type;type:enum('input', 'output');primaryKey"` // 类型
+	Origin      sql.NullString `json:"origin" gorm:"column:origin;type:enum('input', 'output')"`        // 来源
+	InputImage  InputImage     `json:"input_image" gorm:"foreignKey:ImageId;references:Id"`
+	OutputImage OutputImage    `json:"output_image" gorm:"foreignKey:ImageId;references:Id"`
 }
 
 func (TaskImage) TableName() string {
@@ -85,5 +89,16 @@ const (
 )
 
 func (t TaskImageType) String() string {
+	return string(t)
+}
+
+type TaskImageOrigin string
+
+const (
+	TaskImageOriginInput  TaskImageOrigin = "input"
+	TaskImageOriginOutput TaskImageOrigin = "output"
+)
+
+func (t TaskImageOrigin) String() string {
 	return string(t)
 }

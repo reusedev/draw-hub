@@ -21,9 +21,8 @@ func (InputImage) TableName() string {
 }
 
 type OutputImage struct {
-	Id   int    `json:"id" gorm:"primaryKey"`
-	Path string `json:"path" gorm:"column:path;type:varchar(255)"`
-	// TODO save local thumbnail image
+	Id                  int             `json:"id" gorm:"primaryKey"`
+	Path                string          `json:"path" gorm:"column:path;type:varchar(255)"`
 	ThumbNailPath       string          `json:"thumbnail_path" gorm:"column:thumbnail_path;type:varchar(255)"` // Path to the thumbnail image
 	StorageSupplierName string          `json:"storage_supplier_name" gorm:"column:storage_supplier_name;type:varchar(20)"`
 	Key                 string          `json:"key" gorm:"column:key;type:varchar(100)"`

@@ -31,21 +31,13 @@ import (
 type TaskHandler struct {
 	speed         consts.TaskSpeed
 	model         consts.Model
-	inputImages   []*model.InputImage
 	task          *model.Task
 	imageResponse []image.Response
 }
 
 func newTaskHandler(c *gin.Context, form request.TaskForm) (*TaskHandler, error) {
 	h := &TaskHandler{
-		speed:       form.GetSpeed(),
-		inputImages: make([]*model.InputImage, 0),
-	}
-	err := mysql.DB.Model(&model.InputImage{}).
-		Where("id in (?)", form.GetImageIds()).
-		Find(&h.inputImages).Error
-	if err != nil {
-		return nil, err
+		speed: form.GetSpeed(),
 	}
 	if c.FullPath() == "/v2/task/slow/4oVip-four" {
 		h.model = consts.GPT4oImageVip
@@ -64,19 +56,13 @@ func EnqueueUnfinishedTask() error {
 		return err
 	}
 	for _, task := range tasks {
-		inputImages := make([]*model.InputImage, 0)
 		var speed consts.TaskSpeed
-		for _, img := range task.TaskImages {
-			if img.Type == "input" {
-				inputImages = append(inputImages, &img.InputImage)
-			}
-		}
 		if task.Speed == consts.FastSpeed.String() {
 			speed = consts.FastSpeed
 		} else if task.Speed == consts.SlowSpeed.String() {
 			speed = consts.SlowSpeed
 		}
-		h := TaskHandler{speed: speed, inputImages: inputImages, task: &task}
+		h := TaskHandler{speed: speed, task: &task}
 		h.enqueue()
 		logs.Logger.Info().Int("task_id", task.Id).Msg("Re-enqueued task")
 	}
@@ -148,8 +134,19 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 	return nil
 }
 func (h *TaskHandler) inputImageBytes() (ret [][]byte, err error) {
-	for _, img := range h.inputImages {
-		b, err := tools.ReadFile(filepath.Join(config.GConfig.LocalStorageDirectory, img.Path))
+	for _, img := range h.task.TaskImages {
+		if img.Type != model.TaskImageTypeInput.String() {
+			continue
+		}
+		var path, key string
+		if img.Origin.String == model.TaskImageOriginOutput.String() {
+			path = img.OutputImage.Path
+			key = img.OutputImage.Key
+		} else {
+			path = img.InputImage.Path
+			key = img.InputImage.Key
+		}
+		b, err := tools.ReadFile(filepath.Join(config.GConfig.LocalStorageDirectory, path))
 		if err != nil {
 			logs.Logger.Err(err).Msg("Read-LocalFile")
 		} else {
@@ -160,7 +157,7 @@ func (h *TaskHandler) inputImageBytes() (ret [][]byte, err error) {
 		if !config.GConfig.CloudStorageEnabled {
 			return nil, fmt.Errorf("cloud storage is not enabled, cannot get input image bytes")
 		}
-		url, err := ali.OssClient.URL(img.Key, time.Hour)
+		url, err := ali.OssClient.URL(key, time.Hour)
 		if err != nil {
 			logs.Logger.Err(err).Msg("Get-OSS-URL")
 			return nil, err
@@ -192,18 +189,28 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 	if err != nil {
 		return err
 	}
-	h.task = &taskRecord
 	for _, ii := range form.GetImageIds() {
 		taskImageR := model.TaskImage{
 			ImageId: ii,
 			TaskId:  taskRecord.Id,
 			Type:    model.TaskImageTypeInput.String(),
+			Origin:  sql.NullString{Valid: true, String: form.GetImageOrigin()},
 		}
 		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageR).Error
 		if err != nil {
 			return err
 		}
 	}
+	var task model.Task
+	err = mysql.DB.Model(&model.Task{}).
+		Preload("TaskImages").
+		Preload("TaskImages.InputImage").
+		Preload("TaskImages.OutputImage").
+		Where("id = ?", taskRecord.Id).First(&task).Error
+	if err != nil {
+		return err
+	}
+	h.task = &task
 	return nil
 }
 func (h *TaskHandler) createImageRecords(imageResp image.Response) error {
@@ -258,6 +265,7 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 			TaskId:  h.task.Id,
 			ImageId: imageRecord.Id,
 			Type:    model.TaskImageTypeOutput.String(),
+			Origin:  sql.NullString{Valid: false},
 		}
 		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
 		if err != nil {
@@ -309,6 +317,7 @@ func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 			TaskId:  h.task.Id,
 			ImageId: imageRecord.Id,
 			Type:    model.TaskImageTypeOutput.String(),
+			Origin:  sql.NullString{Valid: false},
 		}
 		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageRecord).Error
 		if err != nil {
@@ -409,9 +418,21 @@ func (h *TaskHandler) list(groupId, id string) ([]model.Task, error) {
 	for t := range tasks {
 		for i := range tasks[t].TaskImages {
 			if tasks[t].TaskImages[i].Type == model.TaskImageTypeInput.String() {
+				if tasks[t].TaskImages[i].Origin.String == model.TaskImageOriginOutput.String() {
+					inputImage := tasks[t].TaskImages[i].OutputImage
+					tasks[t].TaskImages[i].InputImage = model.InputImage{
+						Id:                  inputImage.Id,
+						Path:                inputImage.Path,
+						StorageSupplierName: inputImage.StorageSupplierName,
+						Key:                 inputImage.Key,
+						ACL:                 inputImage.ACL,
+						TTL:                 inputImage.TTL,
+						URL:                 inputImage.URL,
+						CreatedAt:           inputImage.CreatedAt,
+					}
+				}
 				tasks[t].TaskImages[i].OutputImage = model.OutputImage{}
-			}
-			if tasks[t].TaskImages[i].Type == model.TaskImageTypeOutput.String() {
+			} else if tasks[t].TaskImages[i].Type == model.TaskImageTypeOutput.String() {
 				tasks[t].TaskImages[i].InputImage = model.InputImage{}
 			}
 		}
