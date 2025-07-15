@@ -22,8 +22,31 @@ type Task struct {
 	TaskImages   []TaskImage `json:"task_images" gorm:"foreignKey:TaskId"`
 }
 
-func (Task) TableName() string {
+func (*Task) TableName() string {
 	return "task"
+}
+
+func (t *Task) TidyImage() {
+	for i := range t.TaskImages {
+		if t.TaskImages[i].Type == TaskImageTypeInput.String() {
+			if t.TaskImages[i].Origin.String == TaskImageOriginOutput.String() {
+				inputImage := t.TaskImages[i].OutputImage
+				t.TaskImages[i].InputImage = InputImage{
+					Id:                  inputImage.Id,
+					Path:                inputImage.Path,
+					StorageSupplierName: inputImage.StorageSupplierName,
+					Key:                 inputImage.Key,
+					ACL:                 inputImage.ACL,
+					TTL:                 inputImage.TTL,
+					URL:                 inputImage.URL,
+					CreatedAt:           inputImage.CreatedAt,
+				}
+			}
+			t.TaskImages[i].OutputImage = OutputImage{}
+		} else if t.TaskImages[i].Type == TaskImageTypeOutput.String() {
+			t.TaskImages[i].InputImage = InputImage{}
+		}
+	}
 }
 
 type TaskType string

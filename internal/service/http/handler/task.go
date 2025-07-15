@@ -419,27 +419,8 @@ func (h *TaskHandler) list(groupId, id string) ([]model.Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	for t := range tasks {
-		for i := range tasks[t].TaskImages {
-			if tasks[t].TaskImages[i].Type == model.TaskImageTypeInput.String() {
-				if tasks[t].TaskImages[i].Origin.String == model.TaskImageOriginOutput.String() {
-					inputImage := tasks[t].TaskImages[i].OutputImage
-					tasks[t].TaskImages[i].InputImage = model.InputImage{
-						Id:                  inputImage.Id,
-						Path:                inputImage.Path,
-						StorageSupplierName: inputImage.StorageSupplierName,
-						Key:                 inputImage.Key,
-						ACL:                 inputImage.ACL,
-						TTL:                 inputImage.TTL,
-						URL:                 inputImage.URL,
-						CreatedAt:           inputImage.CreatedAt,
-					}
-				}
-				tasks[t].TaskImages[i].OutputImage = model.OutputImage{}
-			} else if tasks[t].TaskImages[i].Type == model.TaskImageTypeOutput.String() {
-				tasks[t].TaskImages[i].InputImage = model.InputImage{}
-			}
-		}
+	for i := range tasks {
+		tasks[i].TidyImage()
 	}
 	return tasks, nil
 }
@@ -466,6 +447,7 @@ func SlowSpeed(c *gin.Context) {
 		return
 	}
 	h.enqueue()
+	h.task.TidyImage()
 	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
 }
 
@@ -489,6 +471,7 @@ func FastSpeed(c *gin.Context) {
 		return
 	}
 	h.enqueue()
+	h.task.TidyImage()
 	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
 }
 
