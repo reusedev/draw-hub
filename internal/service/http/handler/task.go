@@ -194,7 +194,11 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 			ImageId: ii,
 			TaskId:  taskRecord.Id,
 			Type:    model.TaskImageTypeInput.String(),
-			Origin:  sql.NullString{Valid: true, String: form.GetImageOrigin()},
+		}
+		if form.GetImageOrigin() != "" {
+			taskImageR.Origin = sql.NullString{Valid: true, String: form.GetImageOrigin()}
+		} else {
+			taskImageR.Origin = sql.NullString{Valid: false}
 		}
 		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageR).Error
 		if err != nil {
