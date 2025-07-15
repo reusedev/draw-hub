@@ -29,19 +29,13 @@ import (
 )
 
 type TaskHandler struct {
-	speed         consts.TaskSpeed
-	model         consts.Model
+	ctx           *gin.Context
 	task          *model.Task
 	imageResponse []image.Response
 }
 
-func newTaskHandler(c *gin.Context, form request.TaskForm) (*TaskHandler, error) {
-	h := &TaskHandler{
-		speed: form.GetSpeed(),
-	}
-	if c.FullPath() == "/v2/task/slow/4oVip-four" {
-		h.model = consts.GPT4oImageVip
-	}
+func newTaskHandler(c *gin.Context) (*TaskHandler, error) {
+	h := &TaskHandler{ctx: c}
 	return h, nil
 }
 
@@ -56,13 +50,7 @@ func EnqueueUnfinishedTask() error {
 		return err
 	}
 	for _, task := range tasks {
-		var speed consts.TaskSpeed
-		if task.Speed == consts.FastSpeed.String() {
-			speed = consts.FastSpeed
-		} else if task.Speed == consts.SlowSpeed.String() {
-			speed = consts.SlowSpeed
-		}
-		h := TaskHandler{speed: speed, task: &task}
+		h := TaskHandler{task: &task}
 		h.enqueue()
 		logs.Logger.Info().Int("task_id", task.Id).Msg("Re-enqueued task")
 	}
@@ -107,7 +95,7 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 	if err != nil {
 		return err
 	}
-	if h.speed == consts.SlowSpeed {
+	if h.task.Speed == consts.SlowSpeed.String() {
 		editRequest := gpt.SlowRequest{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
@@ -118,7 +106,7 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 		if err != nil {
 			return err
 		}
-	} else if h.speed == consts.FastSpeed {
+	} else if h.task.Speed == consts.FastSpeed.String() {
 		editRequest := gpt.FastRequest{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
@@ -178,12 +166,14 @@ func (h *TaskHandler) createTaskRecord(form request.TaskForm) error {
 		Type:        model.TaskTypeEdit.String(),
 		Prompt:      form.GetPrompt(),
 		Speed:       form.GetSpeed().String(),
-		Model:       h.model.String(),
 		Status:      model.TaskStatusPending.String(),
 		Quality:     form.GetQuality(),
 		Size:        form.GetSize(),
 		CreatedAt:   now,
 		UpdatedAt:   now,
+	}
+	if h.ctx.FullPath() == "/v2/task/slow/4oVip-four" {
+		taskRecord.Model = consts.GPT4oImageVip.String()
 	}
 	err := mysql.DB.Model(&model.Task{}).Create(&taskRecord).Error
 	if err != nil {
@@ -435,7 +425,7 @@ func SlowSpeed(c *gin.Context) {
 	if c.FullPath() == "/v2/task/slow/4oVip-four" {
 		form.Prompt = consts.FourImagePrompt + form.Prompt + consts.FourImagePrompt
 	}
-	h, err := newTaskHandler(c, &form)
+	h, err := newTaskHandler(c)
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-SlowSpeed-NewTaskHandler")
 		c.JSON(http.StatusInternalServerError, response.ParamError)
@@ -458,7 +448,7 @@ func FastSpeed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}
-	h, err := newTaskHandler(c, &form)
+	h, err := newTaskHandler(c)
 	if err != nil {
 		logs.Logger.Err(err).Msg("task-FastSpeed-NewTaskHandler")
 		c.JSON(http.StatusInternalServerError, response.ParamError)
