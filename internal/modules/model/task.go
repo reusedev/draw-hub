@@ -2,6 +2,7 @@ package model
 
 import (
 	"database/sql"
+	"github.com/jinzhu/copier"
 	"time"
 )
 
@@ -24,6 +25,20 @@ type Task struct {
 
 func (*Task) TableName() string {
 	return "task"
+}
+
+func (t *Task) TidyImageTask() *Task {
+	c := t.DeepCopy()
+	c.TidyImage()
+	return c
+}
+
+func (t *Task) DeepCopy() *Task {
+	newT := Task{}
+	copier.CopyWithOption(&newT, &t, copier.Option{
+		DeepCopy: true,
+	})
+	return &newT
 }
 
 func (t *Task) TidyImage() {

@@ -437,7 +437,7 @@ func SlowSpeed(c *gin.Context) {
 		return
 	}
 	h.enqueue()
-	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
+	c.JSON(http.StatusOK, response.SuccessWithData(h.task.TidyImageTask()))
 }
 
 func FastSpeed(c *gin.Context) {
@@ -460,7 +460,7 @@ func FastSpeed(c *gin.Context) {
 		return
 	}
 	h.enqueue()
-	c.JSON(http.StatusOK, response.SuccessWithData(h.task))
+	c.JSON(http.StatusOK, response.SuccessWithData(h.task.TidyImageTask()))
 }
 
 func TaskQuery(c *gin.Context) {
