@@ -5,14 +5,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/reusedev/draw-hub/internal/consts"
-	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 )
 
 type Image4oRequest struct {
@@ -103,7 +104,7 @@ func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reade
 		for _, b := range g.ImageBytes {
 			header := make(textproto.MIMEHeader)
 			header.Set("Content-Type", http.DetectContentType(b))
-			header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="image"; filename="%s"`, ""))
+			header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="image"; filename="%s"`, "image.png"))
 			filePart, err := writer.CreatePart(header)
 			if err != nil {
 				return nil, "", err

@@ -1,10 +1,11 @@
 package http
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/reusedev/draw-hub/internal/service/http/handler"
 	"github.com/reusedev/draw-hub/internal/service/http/middleware"
-	"net/http"
 )
 
 func Serve(port string) {
@@ -47,6 +48,8 @@ func initRouter(e *gin.Engine) {
 		taskV2.POST("/slow", handler.SlowSpeed)
 		taskV2.POST("/slow/4oVip-four", handler.SlowSpeed)
 		taskV2.POST("/fast", handler.FastSpeed)
+		taskV2.POST("/generate", handler.Generate)
+		taskV2.POST("/generate/4oVip-four", handler.Generate)
 	}
 	chat := v1.Group("/chat")
 	{

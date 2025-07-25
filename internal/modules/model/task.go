@@ -2,25 +2,26 @@ package model
 
 import (
 	"database/sql"
-	"github.com/jinzhu/copier"
 	"time"
+
+	"github.com/jinzhu/copier"
 )
 
 type Task struct {
-	Id           int         `json:"id" gorm:"primaryKey"`
-	TaskGroupId  string      `json:"task_group_id" gorm:"column:task_group_id;type:varchar(50)"`
-	Type         string      `json:"type" gorm:"column:type;type:enum('generate', 'edit')"`
-	Prompt       string      `json:"prompt" gorm:"column:prompt;type:varchar(5000)"`
-	Speed        string      `json:"speed" gorm:"column:speed;type:enum('fast', 'slow')"`
-	Model        string      `json:"model" gorm:"column:model;type:varchar(20)"`
-	Quality      string      `json:"quality" gorm:"column:quality;type:varchar(20)"`
-	Size         string      `json:"size" gorm:"column:size;type:varchar(20)"`
-	Status       string      `json:"status" gorm:"column:status;type:enum('pending', 'queued', 'running', 'succeed', 'aborted', 'failed')"`
-	FailedReason string      `json:"failed_reason" gorm:"column:failed_reason;type:varchar(1000)"`
-	Progress     float32     `json:"progress" gorm:"column:progress;type:float"`
-	CreatedAt    time.Time   `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
-	UpdatedAt    time.Time   `json:"updated_at" gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
-	TaskImages   []TaskImage `json:"task_images" gorm:"foreignKey:TaskId"`
+	Id           int            `json:"id" gorm:"primaryKey"`
+	TaskGroupId  string         `json:"task_group_id" gorm:"column:task_group_id;type:varchar(50)"`
+	Type         string         `json:"type" gorm:"column:type;type:enum('generate', 'edit')"`
+	Prompt       string         `json:"prompt" gorm:"column:prompt;type:varchar(5000)"`
+	Speed        sql.NullString `json:"speed" gorm:"column:speed;type:enum('fast', 'slow')"`
+	Model        string         `json:"model" gorm:"column:model;type:varchar(20)"`
+	Quality      string         `json:"quality" gorm:"column:quality;type:varchar(20)"`
+	Size         string         `json:"size" gorm:"column:size;type:varchar(20)"`
+	Status       string         `json:"status" gorm:"column:status;type:enum('pending', 'queued', 'running', 'succeed', 'aborted', 'failed')"`
+	FailedReason string         `json:"failed_reason" gorm:"column:failed_reason;type:varchar(1000)"`
+	Progress     float32        `json:"progress" gorm:"column:progress;type:float"`
+	CreatedAt    time.Time      `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
+	UpdatedAt    time.Time      `json:"updated_at" gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
+	TaskImages   []TaskImage    `json:"task_images" gorm:"foreignKey:TaskId"`
 }
 
 func (*Task) TableName() string {

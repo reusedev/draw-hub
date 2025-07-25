@@ -79,3 +79,8 @@ func (s *FastSpeed) GetSize() string {
 func (s *FastSpeed) GetSpeed() consts.TaskSpeed {
 	return consts.FastSpeed
 }
+
+type Generate struct {
+	GroupId string `form:"group_id"`
+	Prompt  string `form:"prompt"`
+}
