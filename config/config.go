@@ -123,9 +123,10 @@ type MySQL struct {
 }
 
 type RequestOrder struct {
-	SlowSpeed  []Request `yaml:"slow_speed"`
-	FastSpeed  []Request `yaml:"fast_speed"`
-	DeepSearch []Request `yaml:"deepsearch"`
+	SlowSpeed   []Request `yaml:"slow_speed"`
+	FastSpeed   []Request `yaml:"fast_speed"`
+	DeepSearch  []Request `yaml:"deepsearch"`
+	GeminiFlash []Request `yaml:"gemini_flash"`
 }
 
 type Request struct {

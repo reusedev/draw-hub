@@ -84,3 +84,10 @@ type Generate struct {
 	GroupId string `form:"group_id"`
 	Prompt  string `form:"prompt"`
 }
+
+type Create struct {
+	ImageType string `form:"image_type"`
+	GroupId   string `form:"group_id"`
+	ImageIds  []int  `form:"image_ids"`
+	Prompt    string `form:"prompt"`
+}

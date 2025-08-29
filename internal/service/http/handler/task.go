@@ -443,7 +443,7 @@ func (h *TaskHandler) endWork() error {
 	if !succeed {
 		var failReason string
 		for _, err := range errs {
-			if errors.Is(err, gpt.PromptError) {
+			if errors.Is(err, image.PromptError) {
 				failReason = "该任务的输入可能违反了相关服务政策，请调整后进行重试"
 				break
 			}
@@ -567,6 +567,29 @@ func TaskQuery(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(tasks))
+}
+
+func Create(c *gin.Context) {
+	form := request.Common{}
+	err := c.ShouldBind(&form)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	h, err := newTaskHandler(c)
+	if err != nil {
+		logs.Logger.Err(err).Msg("task-Generate-NewTaskHandler")
+		c.JSON(http.StatusInternalServerError, response.ParamError)
+		return
+	}
+	err = h.createTaskRecord(&form)
+	if err != nil {
+		logs.Logger.Err(err).Msg("task-Generate")
+		c.JSON(http.StatusInternalServerError, response.InternalError)
+		return
+	}
+	h.enqueue()
+	c.JSON(http.StatusOK, response.SuccessWithData(h.task.TidyImageTask()))
 }
 
 func saveNormalImage(image []byte, t time.Time, supplier string) (relativePath string, err error) {
