@@ -25,7 +25,7 @@ func Flash(request Request) []image.Response {
 			Prompt:     request.Prompt,
 			Model:      order.Model,
 		}
-		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, &FlashImageParser{})
+		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, NewFlashImageParser())
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err).Msg("gemini-FlashImage")
