@@ -33,7 +33,7 @@ type OutputImage struct {
 	CompressionRatio    sql.NullFloat64 `json:"compression_ratio" gorm:"column:compression_ratio;type:float"`
 	ModelSupplierURL    string          `json:"model_supplier_url" gorm:"column:model_supplier_url;type:varchar(500)"`
 	ModelSupplierName   string          `json:"model_supplier_name" gorm:"column:model_supplier_name;type:varchar(20)"`
-	ModelName           string          `json:"model_name" gorm:"column:model_name;type:varchar(20)"`
+	ModelName           string          `json:"model_name" gorm:"column:model_name;type:varchar(30)"`
 	CreatedAt           time.Time       `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
 }
 

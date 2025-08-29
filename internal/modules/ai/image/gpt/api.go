@@ -32,7 +32,7 @@ func SlowSpeed(request SlowRequest) []image.Response {
 			Prompt:     request.Prompt,
 			Model:      order.Model,
 		}
-		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, &Image4oParser{})
+		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, NewImage4oParser())
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err).Msg("gpt-SlowSpeed")
@@ -55,7 +55,7 @@ func FastSpeed(request FastRequest) []image.Response {
 			Quality:    request.Quality,
 			Size:       request.Size,
 		}
-		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, &Image1Parser{})
+		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, NewImage1Parser())
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err).Msg("gpt-FastSpeed")
