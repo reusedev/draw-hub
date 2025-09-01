@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image/gemini"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -93,12 +94,12 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 		}
 	}()
 	switch h.task.Type {
-	case model.TaskTypeEdit.String():
+	case consts.TaskTypeEdit.String():
 		err := h.edit()
 		if err != nil {
 			return err
 		}
-	case model.TaskTypeGenerate.String():
+	case consts.TaskTypeGenerate.String():
 		err := h.generate()
 		if err != nil {
 			return err
@@ -121,10 +122,6 @@ func (h *TaskHandler) edit() error {
 			Model:      h.task.Model,
 		}
 		h.imageResponse = gpt.SlowSpeed(editRequest)
-		err = h.endWork()
-		if err != nil {
-			return err
-		}
 	} else if h.task.Speed.Valid && h.task.Speed.String == consts.FastSpeed.String() {
 		editRequest := gpt.FastRequest{
 			ImageBytes: bs,
@@ -133,22 +130,37 @@ func (h *TaskHandler) edit() error {
 			Size:       h.task.Size,
 		}
 		h.imageResponse = gpt.FastSpeed(editRequest)
-		err = h.endWork()
-		if err != nil {
-			return err
+	} else if strings.HasPrefix(h.task.Model, "gemini") {
+		req := gemini.Request{
+			ImageBytes: bs,
+			Prompt:     h.task.Prompt,
+			Model:      h.task.Model,
 		}
+		h.imageResponse = gemini.Create(req)
 	} else {
 		return fmt.Errorf("unknown speed: %s", h.task.Speed.String)
+	}
+	err = h.endWork()
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (h *TaskHandler) generate() error {
-	genRequest := gpt.SlowRequest{
-		Prompt: h.task.Prompt,
-		Model:  h.task.Model,
+	if strings.HasPrefix(h.task.Model, "gemini") {
+		req := gemini.Request{
+			Prompt: h.task.Prompt,
+			Model:  h.task.Model,
+		}
+		h.imageResponse = gemini.Create(req)
+	} else {
+		genRequest := gpt.SlowRequest{
+			Prompt: h.task.Prompt,
+			Model:  h.task.Model,
+		}
+		h.imageResponse = gpt.SlowSpeed(genRequest)
 	}
-	h.imageResponse = gpt.SlowSpeed(genRequest)
 	err := h.endWork()
 	if err != nil {
 		return err
@@ -199,7 +211,7 @@ func (h *TaskHandler) createEditTask(form request.TaskForm) error {
 	now := time.Now()
 	taskRecord := model.Task{
 		TaskGroupId: form.GetGroupId(),
-		Type:        model.TaskTypeEdit.String(),
+		Type:        consts.TaskTypeEdit.String(),
 		Prompt:      form.GetPrompt(),
 		Speed:       sql.NullString{Valid: true, String: form.GetSpeed().String()},
 		Status:      model.TaskStatusPending.String(),
@@ -248,7 +260,7 @@ func (h *TaskHandler) createGenerateTask(form *request.Generate) error {
 	now := time.Now()
 	task := model.Task{
 		TaskGroupId: form.GroupId,
-		Type:        model.TaskTypeGenerate.String(),
+		Type:        consts.TaskTypeGenerate.String(),
 		Prompt:      form.Prompt,
 		Status:      model.TaskStatusPending.String(),
 		CreatedAt:   now,
@@ -265,11 +277,57 @@ func (h *TaskHandler) createGenerateTask(form *request.Generate) error {
 	return nil
 }
 
+func (h *TaskHandler) createTask(form *request.Create) error {
+	now := time.Now()
+	taskRecord := model.Task{
+		TaskGroupId: form.GroupId,
+		Type:        form.TaskType(),
+		Prompt:      form.Prompt,
+		Model:       form.Model,
+		Status:      model.TaskStatusPending.String(),
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	err := mysql.DB.Model(&model.Task{}).Create(&taskRecord).Error
+	if err != nil {
+		return err
+	}
+	for _, ii := range form.ImageIds {
+		taskImageR := model.TaskImage{
+			ImageId: ii,
+			TaskId:  taskRecord.Id,
+			Type:    model.TaskImageTypeInput.String(),
+		}
+		if form.ImageType != "" {
+			taskImageR.Origin = sql.NullString{Valid: true, String: form.ImageType}
+		} else {
+			taskImageR.Origin = sql.NullString{Valid: false}
+		}
+		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageR).Error
+		if err != nil {
+			return err
+		}
+	}
+	var task model.Task
+	err = mysql.DB.Model(&model.Task{}).
+		Preload("TaskImages").
+		Preload("TaskImages.InputImage").
+		Preload("TaskImages.OutputImage").
+		Where("id = ?", taskRecord.Id).First(&task).Error
+	if err != nil {
+		return err
+	}
+	h.task = &task
+	return nil
+}
+
 func (h *TaskHandler) createTaskRecord(form any) error {
 	if _, ok := form.(request.TaskForm); ok {
 		return h.createEditTask(form.(request.TaskForm))
 	} else if _, ok := form.(*request.Generate); ok {
 		return h.createGenerateTask(form.(*request.Generate))
+	} else if _, ok := form.(*request.Create); ok {
+		return h.createTask(form.(*request.Create))
 	}
 	return fmt.Errorf("unknown task form type: %T", form)
 }
@@ -570,7 +628,7 @@ func TaskQuery(c *gin.Context) {
 }
 
 func Create(c *gin.Context) {
-	form := request.Common{}
+	form := request.Create{}
 	err := c.ShouldBind(&form)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ParamError)

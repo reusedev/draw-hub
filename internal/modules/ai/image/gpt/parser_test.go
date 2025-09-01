@@ -10,7 +10,7 @@ import (
 )
 
 func TestImage4oParser_Parse(t *testing.T) {
-	parser := &Image4oParser{}
+	parser := NewImage4oParser()
 
 	// 测试用例1：新的JSON格式响应（你提供的日志数据）
 	t.Run("JSON格式响应", func(t *testing.T) {
@@ -38,7 +38,7 @@ func TestImage4oParser_Parse(t *testing.T) {
 			StatusCode: 200,
 			Body:       io.NopCloser(strings.NewReader(jsonBody)),
 			Request: &http.Request{
-				URL: &url.URL{Path: "/v1/chat/completions"},
+				URL:    &url.URL{Path: "/v1/chat/completions"},
 				Method: "POST",
 			},
 		}
@@ -79,7 +79,7 @@ func TestImage4oParser_Parse(t *testing.T) {
 			StatusCode: 200,
 			Body:       io.NopCloser(strings.NewReader(oldBody)),
 			Request: &http.Request{
-				URL: &url.URL{Path: "/v1/chat/completions"},
+				URL:    &url.URL{Path: "/v1/chat/completions"},
 				Method: "POST",
 			},
 		}
@@ -120,7 +120,7 @@ func TestImage4oParser_Parse(t *testing.T) {
 			StatusCode: 200,
 			Body:       io.NopCloser(strings.NewReader(invalidBody)),
 			Request: &http.Request{
-				URL: &url.URL{Path: "/v1/chat/completions"},
+				URL:    &url.URL{Path: "/v1/chat/completions"},
 				Method: "POST",
 			},
 		}
@@ -147,7 +147,7 @@ func TestImage4oParser_Parse(t *testing.T) {
 
 // 简单的集成测试
 func TestImage4oParser_Integration(t *testing.T) {
-	parser := &Image4oParser{}
+	parser := NewImage4oParser()
 
 	// 模拟你提供的实际日志数据
 	jsonBody := `{
@@ -188,7 +188,7 @@ func TestImage4oParser_Integration(t *testing.T) {
 		StatusCode: 200,
 		Body:       io.NopCloser(strings.NewReader(jsonBody)),
 		Request: &http.Request{
-			URL: &url.URL{Path: "/v1/chat/completions"},
+			URL:    &url.URL{Path: "/v1/chat/completions"},
 			Method: "POST",
 		},
 	}

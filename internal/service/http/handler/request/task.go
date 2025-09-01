@@ -1,6 +1,8 @@
 package request
 
-import "github.com/reusedev/draw-hub/internal/consts"
+import (
+	"github.com/reusedev/draw-hub/internal/consts"
+)
 
 type TaskForm interface {
 	GetImageOrigin() string
@@ -86,8 +88,16 @@ type Generate struct {
 }
 
 type Create struct {
+	Model     string `form:"model"`
 	ImageType string `form:"image_type"`
 	GroupId   string `form:"group_id"`
 	ImageIds  []int  `form:"image_ids"`
 	Prompt    string `form:"prompt"`
+}
+
+func (c *Create) TaskType() string {
+	if len(c.ImageIds) != 0 {
+		return consts.TaskTypeEdit.String()
+	}
+	return consts.TaskTypeGenerate.String()
 }

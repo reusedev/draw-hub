@@ -14,9 +14,9 @@ type Request struct {
 	Model      string   `json:"model"`
 }
 
-func Flash(request Request) []image.Response {
+func Create(request Request) []image.Response {
 	ret := make([]image.Response, 0)
-	for _, order := range config.GConfig.RequestOrder.GeminiFlash {
+	for _, order := range config.GConfig.RequestOrder.Gemini25Flash {
 		if request.Model != "" && order.Model != request.Model {
 			continue
 		}

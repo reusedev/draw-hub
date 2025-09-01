@@ -51,3 +51,14 @@ func (s TaskSpeed) String() string {
 const (
 	FourImagePrompt = "\n请一定返回4张图片.Please do return four images."
 )
+
+type TaskType string
+
+const (
+	TaskTypeEdit     TaskType = "edit"
+	TaskTypeGenerate TaskType = "generate"
+)
+
+func (t TaskType) String() string {
+	return string(t)
+}

@@ -110,3 +110,9 @@ request_order:
       token: "sk-"
       desc: "default"
       model: "grok-3-deepsearch"
+  gemini_25_flash:
+    -
+      supplier: "tuzi"
+      token: "sk-"
+      desc: "default"
+      model: "gemini-2.5-flash-image"

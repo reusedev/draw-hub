@@ -13,7 +13,7 @@ type Task struct {
 	Type         string         `json:"type" gorm:"column:type;type:enum('generate', 'edit')"`
 	Prompt       string         `json:"prompt" gorm:"column:prompt;type:varchar(5000)"`
 	Speed        sql.NullString `json:"speed" gorm:"column:speed;type:enum('fast', 'slow')"`
-	Model        string         `json:"model" gorm:"column:model;type:varchar(20)"`
+	Model        string         `json:"model" gorm:"column:model;type:varchar(30)"`
 	Quality      string         `json:"quality" gorm:"column:quality;type:varchar(20)"`
 	Size         string         `json:"size" gorm:"column:size;type:varchar(20)"`
 	Status       string         `json:"status" gorm:"column:status;type:enum('pending', 'queued', 'running', 'succeed', 'aborted', 'failed')"`
@@ -65,17 +65,6 @@ func (t *Task) TidyImage() {
 	}
 }
 
-type TaskType string
-
-const (
-	TaskTypeGenerate TaskType = "generate"
-	TaskTypeEdit     TaskType = "edit"
-)
-
-func (t TaskType) String() string {
-	return string(t)
-}
-
 type TaskStatus string
 
 const (
@@ -96,7 +85,7 @@ type SupplierInvokeHistory struct {
 	TaskId         int       `json:"task_id" gorm:"column:task_id;type:int"`
 	SupplierName   string    `json:"supplier_name" gorm:"column:supplier_name;type:varchar(20)"`
 	TokenDesc      string    `json:"token_desc" gorm:"column:token_desc;type:varchar(20)"`
-	ModelName      string    `json:"model_name" gorm:"column:model_name;type:varchar(20)"`
+	ModelName      string    `json:"model_name" gorm:"column:model_name;type:varchar(30)"`
 	StatusCode     int       `json:"status_code" gorm:"column:status_code;type:int"`
 	FailedRespBody string    `json:"failed_resp_body" gorm:"column:failed_resp_body;type:varchar(2000)"`
 	DurationMs     int64     `json:"duration_ms" gorm:"column:duration_ms;type:int"`

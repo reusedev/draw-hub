@@ -37,6 +37,7 @@ func initRouter(e *gin.Engine) {
 	e.Use(middleware.RequestLogger())
 	v1 := e.Group("/v1")
 	v2 := e.Group("/v2")
+	v3 := e.Group("/v3")
 	task := v1.Group("/task")
 	{
 		task.POST("/slow", handler.SlowSpeed)
@@ -50,6 +51,10 @@ func initRouter(e *gin.Engine) {
 		taskV2.POST("/fast", handler.FastSpeed)
 		taskV2.POST("/generate", handler.Generate)
 		taskV2.POST("/generate/4oVip-four", handler.Generate)
+	}
+	taskV3 := v3.Group("/task")
+	{
+		taskV3.POST("/create", handler.Create)
 	}
 	chat := v1.Group("/chat")
 	{
