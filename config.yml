@@ -116,3 +116,8 @@ request_order:
       token: "sk-"
       desc: "default"
       model: "gemini-2.5-flash-image"
+    -
+      supplier: "geek"
+      token: "sk-"
+      desc: "low_price"
+      model: "gemini-2.5-flash-image"

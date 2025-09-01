@@ -1,6 +1,7 @@
 package image
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"net/http"
@@ -66,7 +67,7 @@ func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 		}
 	} else {
 		// 如果JSON解析失败，尝试原来的正则表达式
-		reg := `(https?[^)]+)\)\\n\\n\[点击下载\]`
+		reg := `(https?[^)]+)\)`
 		pattern, _ := regexp.Compile(reg)
 		matches := pattern.FindAllStringSubmatch(string(body), -1)
 		for _, match := range matches {
@@ -141,6 +142,78 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 			Str("body", string(body)).
 			Msg("image resp error")
 		if detectedErr := DetectError(response.GetSupplier(), response.GetModel(), string(body)); detectedErr != nil {
+			response.SetError(detectedErr)
+		}
+	}
+	return nil
+}
+
+type StreamParser struct {
+	strategy ParseStrategy
+}
+
+func NewStreamParser(strategy ParseStrategy) *StreamParser {
+	return &StreamParser{strategy: strategy}
+}
+
+func (s *StreamParser) extractContent(chunk []byte) []byte {
+	var chatResp struct {
+		Choices []struct {
+			Delta struct {
+				Content string `json:"content"`
+			} `json:"delta"`
+		} `json:"choices"`
+	}
+	if err := jsoniter.Unmarshal(chunk, &chatResp); err == nil && len(chatResp.Choices) > 0 {
+		return []byte(chatResp.Choices[0].Delta.Content)
+	}
+	return nil
+}
+
+func (s *StreamParser) Parse(resp *http.Response, response Response) error {
+	defer resp.Body.Close()
+	var content strings.Builder
+	buffer := make([]byte, 4096)
+	var urls []string
+	urlSet := make(map[string]struct{})
+
+	for {
+		n, err := resp.Body.Read(buffer)
+		if n > 0 {
+			chunk := s.extractContent(bytes.TrimPrefix(buffer[:n], []byte("data: ")))
+			content.Write(chunk)
+			us, err := s.strategy.ExtractURLs([]byte(content.String()))
+			if err != nil {
+				return err
+			}
+			for _, url := range us {
+				if _, exists := urlSet[url]; !exists {
+					urlSet[url] = struct{}{}
+					urls = append(urls, url)
+				}
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+	bodyString := content.String()
+	response.SetBasicResponse(resp.StatusCode, bodyString, time.Now())
+	response.SetURLs(urls)
+	if !s.strategy.ValidateResponse(response) {
+		logs.Logger.Warn().Str("supplier", response.GetSupplier()).
+			Str("token_desc", response.GetTokenDesc()).
+			Str("model", response.GetModel()).
+			Str("path", resp.Request.URL.Path).
+			Str("method", resp.Request.Method).
+			Int("status_code", resp.StatusCode).
+			Int64("duration", response.DurationMs()).
+			Str("body", bodyString).
+			Msg("stream image resp error")
+		if detectedErr := DetectError(response.GetSupplier(), response.GetModel(), bodyString); detectedErr != nil {
 			response.SetError(detectedErr)
 		}
 	}

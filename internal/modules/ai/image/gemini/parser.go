@@ -8,12 +8,12 @@ import (
 )
 
 type FlashImageParser struct {
-	*image.GenericParser
+	*image.StreamParser
 }
 
 func NewFlashImageParser() *FlashImageParser {
 	return &FlashImageParser{
-		GenericParser: image.NewGenericParser(&image.MarkdownImageStrategy{}),
+		StreamParser: image.NewStreamParser(&image.MarkdownImageStrategy{}),
 	}
 }
 

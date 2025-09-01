@@ -19,7 +19,7 @@ type FlashImageRequest struct {
 func (f *FlashImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
 	body := make(map[string]any)
 	body["model"] = f.Model
-	body["stream"] = false
+	body["stream"] = true
 	body["messages"] = []map[string]interface{}{
 		{
 			"role": "user",
