@@ -49,7 +49,7 @@ func (s TaskSpeed) String() string {
 }
 
 const (
-	FourImagePrompt = "\n请一定返回4张图片.Please do return four images."
+	FourImagePrompt = "\n请一定返回 2 张单独的图片,且 2 张图片内容有些差异化，便于我挑选"
 )
 
 type TaskType string
