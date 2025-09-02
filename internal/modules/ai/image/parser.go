@@ -1,7 +1,7 @@
 package image
 
 import (
-	"bytes"
+	"bufio"
 	"errors"
 	"io"
 	"net/http"
@@ -166,6 +166,12 @@ func (s *StreamParser) extractContent(chunk []byte) []byte {
 	}
 	if err := jsoniter.Unmarshal(chunk, &chatResp); err == nil && len(chatResp.Choices) > 0 {
 		return []byte(chatResp.Choices[0].Delta.Content)
+	} else if err != nil {
+		// Log parsing errors for debugging (only in development)
+		logs.Logger.Debug().
+			Err(err).
+			Str("chunk", string(chunk)).
+			Msg("Failed to parse SSE chunk")
 	}
 	return nil
 }
@@ -173,32 +179,51 @@ func (s *StreamParser) extractContent(chunk []byte) []byte {
 func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 	defer resp.Body.Close()
 	var content strings.Builder
-	buffer := make([]byte, 4096)
 	var urls []string
 	urlSet := make(map[string]struct{})
-
-	for {
-		n, err := resp.Body.Read(buffer)
-		if n > 0 {
-			chunk := s.extractContent(bytes.TrimPrefix(buffer[:n], []byte("data: ")))
-			content.Write(chunk)
-			us, err := s.strategy.ExtractURLs([]byte(content.String()))
-			if err != nil {
-				return err
+	
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // Increase buffer size for large chunks
+	
+	for scanner.Scan() {
+		line := scanner.Text()
+		
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+		
+		// Process SSE data lines
+		if strings.HasPrefix(line, "data: ") {
+			dataStr := strings.TrimPrefix(line, "data: ")
+			dataStr = strings.TrimSpace(dataStr)
+			
+			// Skip [DONE] marker
+			if dataStr == "[DONE]" {
+				break
 			}
-			for _, url := range us {
-				if _, exists := urlSet[url]; !exists {
-					urlSet[url] = struct{}{}
-					urls = append(urls, url)
+			
+			// Try to parse the JSON chunk
+			chunk := s.extractContent([]byte(dataStr))
+			if chunk != nil {
+				content.Write(chunk)
+				// Extract URLs from accumulated content
+				if extractedURLs, err := s.strategy.ExtractURLs([]byte(content.String())); err == nil {
+					for _, url := range extractedURLs {
+						if _, exists := urlSet[url]; !exists {
+							urlSet[url] = struct{}{}
+							urls = append(urls, url)
+						}
+					}
 				}
 			}
 		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
+		// Ignore other SSE fields like event:, id:, retry:, etc.
+	}
+	
+	if err := scanner.Err(); err != nil {
+		logs.Logger.Error().Err(err).Msg("Error reading SSE stream")
+		return err
 	}
 	bodyString := content.String()
 	response.SetBasicResponse(resp.StatusCode, bodyString, time.Now())
