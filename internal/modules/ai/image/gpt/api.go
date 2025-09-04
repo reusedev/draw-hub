@@ -29,6 +29,9 @@ func SlowSpeed(request SlowRequest) []image.Response {
 		if request.Model != "" && order.Model != request.Model {
 			continue
 		}
+		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
+			Str("token_desc", order.Desc).Str("model", order.Model).Msg("Attempting GPT SlowSpeed request")
+		
 		content := Image4oRequest{
 			ImageBytes: request.ImageBytes,
 			Prompt:     request.Prompt,
@@ -38,20 +41,49 @@ func SlowSpeed(request SlowRequest) []image.Response {
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
-			logs.Logger.Err(err).Msg("gpt-SlowSpeed")
+			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", order.Supplier).
+				Str("model", order.Model).Msg("GPT SlowSpeed request failed")
 			continue
 		}
 		ret = append(ret, response)
 		if response.Succeed() {
+			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
+				Str("model", order.Model).Msg("GPT SlowSpeed request succeeded, stopping iteration")
 			break
+		} else {
+			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
+				Str("model", order.Model).Msg("GPT SlowSpeed request completed but failed validation, continuing")
 		}
 	}
+		
 	return ret
 }
 
 func FastSpeed(request FastRequest) []image.Response {
+	// 记录方法开始执行日志
+	logs.Logger.Info().
+		Int("task_id", request.TaskID).
+		Str("method", "FastSpeed").
+		Str("quality", request.Quality).
+		Str("size", request.Size).
+		Int("available_orders", len(config.GConfig.RequestOrder.FastSpeed)).
+		Msg("GPT FastSpeed method started")
+
 	ret := make([]image.Response, 0)
+	attemptCount := 0
+	
 	for _, order := range config.GConfig.RequestOrder.FastSpeed {
+		attemptCount++
+		logs.Logger.Info().
+			Int("task_id", request.TaskID).
+			Int("attempt", attemptCount).
+			Str("supplier", order.Supplier).
+			Str("token_desc", order.Desc).
+			Str("model", order.Model).
+			Str("quality", request.Quality).
+			Str("size", request.Size).
+			Msg("Attempting GPT FastSpeed request")
+		
 		content := Image1Request{
 			ImageBytes: request.ImageBytes,
 			Prompt:     request.Prompt,
@@ -62,13 +94,34 @@ func FastSpeed(request FastRequest) []image.Response {
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
-			logs.Logger.Err(err).Msg("gpt-FastSpeed")
+			logs.Logger.Error().
+				Err(err).
+				Int("task_id", request.TaskID).
+				Int("attempt", attemptCount).
+				Str("supplier", order.Supplier).
+				Str("model", order.Model).
+				Msg("GPT FastSpeed request failed")
 			continue
 		}
 		ret = append(ret, response)
 		if response.Succeed() {
+			logs.Logger.Info().
+				Int("task_id", request.TaskID).
+				Int("attempt", attemptCount).
+				Str("supplier", order.Supplier).
+				Str("model", order.Model).
+				Int("total_attempts", attemptCount).
+				Msg("GPT FastSpeed request succeeded, stopping iteration")
 			break
+		} else {
+			logs.Logger.Warn().
+				Int("task_id", request.TaskID).
+				Int("attempt", attemptCount).
+				Str("supplier", order.Supplier).
+				Str("model", order.Model).
+				Msg("GPT FastSpeed request completed but failed validation, continuing")
 		}
 	}
+		
 	return ret
 }
