@@ -13,12 +13,14 @@ type FastRequest struct {
 	Prompt     string   `json:"prompt"`
 	Quality    string   `json:"quality"`
 	Size       string   `json:"size"`
+	TaskID     int      `json:"task_id"` // 添加TaskID字段
 }
 
 type SlowRequest struct {
 	ImageBytes [][]byte `json:"image_bytes"`
 	Prompt     string   `json:"prompt"`
 	Model      string   `json:"model"`
+	TaskID     int      `json:"task_id"` // 添加TaskID字段
 }
 
 func SlowSpeed(request SlowRequest) []image.Response {
@@ -33,6 +35,7 @@ func SlowSpeed(request SlowRequest) []image.Response {
 			Model:      order.Model,
 		}
 		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, NewImage4oParser())
+		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err).Msg("gpt-SlowSpeed")
@@ -56,6 +59,7 @@ func FastSpeed(request FastRequest) []image.Response {
 			Size:       request.Size,
 		}
 		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, NewImage1Parser())
+		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err).Msg("gpt-FastSpeed")

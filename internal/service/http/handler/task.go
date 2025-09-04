@@ -67,7 +67,14 @@ func (h *TaskHandler) enqueue() {
 }
 
 func (h *TaskHandler) Fail(err error) {
-	logs.Logger.Err(err).Msg("task-Failed")
+	// 记录任务异常失败日志
+	logs.Logger.Error().
+		Err(err).
+		Int("task_id", h.task.Id).
+		Str("model", h.task.Model).
+		Str("status", "failed").
+		Msg("Task execution failed with exception")
+		
 	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
 		"status":        model.TaskStatusFailed.String(),
 		"failed_reason": "任务执行失败，请稍后重试",
@@ -75,6 +82,14 @@ func (h *TaskHandler) Fail(err error) {
 }
 
 func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
+	// 记录任务开始执行日志
+	logs.Logger.Info().
+		Int("task_id", h.task.Id).
+		Str("task_type", h.task.Type).
+		Str("model", h.task.Model).
+		Str("status", "started").
+		Msg("Task execution started")
+
 	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
 		"status": model.TaskStatusRunning.String(),
 	})
@@ -116,25 +131,54 @@ func (h *TaskHandler) edit() error {
 		return err
 	}
 	if h.task.Speed.Valid && h.task.Speed.String == consts.SlowSpeed.String() {
+		// 记录GPT慢速模式供应商调用日志
+		logs.Logger.Info().
+			Int("task_id", h.task.Id).
+			Str("supplier", "gpt").
+			Str("model", h.task.Model).
+			Str("speed", "slow").
+			Str("operation", "edit").
+			Msg("Calling image supplier")
+
 		editRequest := gpt.SlowRequest{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Model:      h.task.Model,
+			TaskID:     h.task.Id, // 传递TaskID
 		}
 		h.imageResponse = gpt.SlowSpeed(editRequest)
 	} else if h.task.Speed.Valid && h.task.Speed.String == consts.FastSpeed.String() {
+		// 记录GPT快速模式供应商调用日志
+		logs.Logger.Info().
+			Int("task_id", h.task.Id).
+			Str("supplier", "gpt").
+			Str("model", h.task.Model).
+			Str("speed", "fast").
+			Str("operation", "edit").
+			Msg("Calling image supplier")
+
 		editRequest := gpt.FastRequest{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Quality:    h.task.Quality,
 			Size:       h.task.Size,
+			TaskID:     h.task.Id, // 传递TaskID
 		}
 		h.imageResponse = gpt.FastSpeed(editRequest)
 	} else if strings.HasPrefix(h.task.Model, "gemini") {
+		// 记录Gemini供应商调用日志
+		logs.Logger.Info().
+			Int("task_id", h.task.Id).
+			Str("supplier", "gemini").
+			Str("model", h.task.Model).
+			Str("operation", "edit").
+			Msg("Calling image supplier")
+
 		req := gemini.Request{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Model:      h.task.Model,
+			TaskID:     h.task.Id, // 传递TaskID
 		}
 		h.imageResponse = gemini.Create(req)
 	} else {
@@ -149,15 +193,33 @@ func (h *TaskHandler) edit() error {
 
 func (h *TaskHandler) generate() error {
 	if strings.HasPrefix(h.task.Model, "gemini") {
+		// 记录Gemini供应商调用日志
+		logs.Logger.Info().
+			Int("task_id", h.task.Id).
+			Str("supplier", "gemini").
+			Str("model", h.task.Model).
+			Str("operation", "generate").
+			Msg("Calling image supplier")
+
 		req := gemini.Request{
 			Prompt: h.task.Prompt,
 			Model:  h.task.Model,
+			TaskID: h.task.Id, // 传递TaskID
 		}
 		h.imageResponse = gemini.Create(req)
 	} else {
+		// 记录GPT供应商调用日志
+		logs.Logger.Info().
+			Int("task_id", h.task.Id).
+			Str("supplier", "gpt").
+			Str("model", h.task.Model).
+			Str("operation", "generate").
+			Msg("Calling image supplier")
+
 		genRequest := gpt.SlowRequest{
 			Prompt: h.task.Prompt,
 			Model:  h.task.Model,
+			TaskID: h.task.Id, // 传递TaskID
 		}
 		h.imageResponse = gpt.SlowSpeed(genRequest)
 	}
@@ -491,6 +553,15 @@ func (h *TaskHandler) endWork() error {
 			if err != nil {
 				return err
 			}
+			
+			// 记录任务成功完成日志
+			logs.Logger.Info().
+				Int("task_id", h.task.Id).
+				Str("supplier", v.GetSupplier()).
+				Str("model", v.GetModel()).
+				Str("status", "success").
+				Int64("duration_ms", v.DurationMs()).
+				Msg("Task completed successfully")
 		} else {
 			err := v.GetError()
 			if err != nil {
@@ -515,6 +586,15 @@ func (h *TaskHandler) endWork() error {
 		if err != nil {
 			return err
 		}
+		
+		// 记录任务失败日志
+		logs.Logger.Error().
+			Int("task_id", h.task.Id).
+			Str("model", h.task.Model).
+			Str("status", "failed").
+			Str("failed_reason", failReason).
+			Errs("errors", errs).
+			Msg("Task execution failed")
 	}
 	return nil
 }

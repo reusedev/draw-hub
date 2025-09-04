@@ -22,6 +22,7 @@ type Response interface {
 	GetRespAt() time.Time
 	FailedRespBody() string // != 200
 	DurationMs() int64
+	GetTaskID() int // 添加TaskID方法
 
 	Succeed() bool
 	GetURLs() []string
@@ -30,6 +31,7 @@ type Response interface {
 	SetBasicResponse(statusCode int, respBody string, respAt time.Time)
 	SetURLs(urls []string)
 	SetError(err error)
+	SetTaskID(taskID int) // 添加设置TaskID的方法
 }
 
 type Parser interface {
@@ -132,7 +134,9 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 	}
 	response.SetURLs(urls)
 	if !g.strategy.ValidateResponse(response) {
-		logs.Logger.Warn().Str("supplier", response.GetSupplier()).
+		logs.Logger.Warn().
+			Int("task_id", response.GetTaskID()).
+			Str("supplier", response.GetSupplier()).
 			Str("token_desc", response.GetTokenDesc()).
 			Str("model", response.GetModel()).
 			Str("path", resp.Request.URL.Path).
@@ -229,7 +233,9 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 	response.SetBasicResponse(resp.StatusCode, bodyString, time.Now())
 	response.SetURLs(urls)
 	if !s.strategy.ValidateResponse(response) {
-		logs.Logger.Warn().Str("supplier", response.GetSupplier()).
+		logs.Logger.Warn().
+			Int("task_id", response.GetTaskID()).
+			Str("supplier", response.GetSupplier()).
 			Str("token_desc", response.GetTokenDesc()).
 			Str("model", response.GetModel()).
 			Str("path", resp.Request.URL.Path).

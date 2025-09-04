@@ -27,6 +27,7 @@ type FlashImageResponse struct {
 	Duration   time.Duration `json:"duration"`
 	URLs       []string      `json:"URLs"`
 	Error      error         `json:"error,omitempty"`
+	TaskID     int           `json:"task_id"` // 添加TaskID字段
 }
 
 func (f *FlashImageResponse) GetSupplier() string {
@@ -75,4 +76,12 @@ func (f *FlashImageResponse) SetURLs(urls []string) {
 
 func (f *FlashImageResponse) SetError(err error) {
 	f.Error = err
+}
+
+func (f *FlashImageResponse) GetTaskID() int {
+	return f.TaskID
+}
+
+func (f *FlashImageResponse) SetTaskID(taskID int) {
+	f.TaskID = taskID
 }

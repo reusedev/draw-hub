@@ -49,6 +49,7 @@ type Image4oResponse struct {
 	Duration   time.Duration `json:"duration"`
 	URLs       []string      `json:"URLs"`
 	Error      error         `json:"error,omitempty"`
+	TaskID     int           `json:"task_id"` // 添加TaskID字段
 }
 
 func (r *Image4oResponse) GetSupplier() string {
@@ -99,6 +100,14 @@ func (r *Image4oResponse) SetError(err error) {
 	r.Error = err
 }
 
+func (r *Image4oResponse) GetTaskID() int {
+	return r.TaskID
+}
+
+func (r *Image4oResponse) SetTaskID(taskID int) {
+	r.TaskID = taskID
+}
+
 type Image1Response struct {
 	Supplier   string        `json:"supplier"`
 	TokenDesc  string        `json:"token_desc"`
@@ -110,6 +119,7 @@ type Image1Response struct {
 	Base64     []string      `json:"base64"`
 	URLs       []string      `json:"URLs"`
 	Error      error         `json:"error,omitempty"`
+	TaskID     int           `json:"task_id"` // 添加TaskID字段
 }
 
 func (r *Image1Response) GetSupplier() string {
@@ -158,4 +168,12 @@ func (r *Image1Response) SetURLs(urls []string) {
 
 func (r *Image1Response) SetError(err error) {
 	r.Error = err
+}
+
+func (r *Image1Response) GetTaskID() int {
+	return r.TaskID
+}
+
+func (r *Image1Response) SetTaskID(taskID int) {
+	r.TaskID = taskID
 }

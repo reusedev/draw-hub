@@ -13,6 +13,7 @@ type Requester struct {
 	token        ai.Token
 	RequestTypes RequestContent
 	Parser       Parser
+	TaskID       int // 添加TaskID字段用于日志跟踪
 }
 
 func NewRequester(token ai.Token, requestTypes RequestContent, parser Parser) *Requester {
@@ -20,7 +21,13 @@ func NewRequester(token ai.Token, requestTypes RequestContent, parser Parser) *R
 		token:        token,
 		RequestTypes: requestTypes,
 		Parser:       parser,
+		TaskID:       0, // 默认值，需要调用方设置
 	}
+}
+
+func (r *Requester) SetTaskID(taskID int) *Requester {
+	r.TaskID = taskID
+	return r
 }
 
 func (r *Requester) Do() (Response, error) {
@@ -46,7 +53,9 @@ func (r *Requester) Do() (Response, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	logs.Logger.Info().Str("supplier", r.token.Supplier.String()).
+	logs.Logger.Info().
+		Int("task_id", r.TaskID).
+		Str("supplier", r.token.Supplier.String()).
 		Str("token_desc", r.token.Desc).
 		Str("path", r.RequestTypes.Path()).
 		Str("method", req.Method).
@@ -54,6 +63,7 @@ func (r *Requester) Do() (Response, error) {
 		Dur("duration", duration).
 		Msg("image request")
 	ret := r.RequestTypes.InitResponse(r.token.Supplier.String(), duration, r.token.Desc)
+	ret.SetTaskID(r.TaskID) // 设置TaskID到响应中
 	err = r.Parser.Parse(resp, ret)
 	if err != nil {
 		return nil, err

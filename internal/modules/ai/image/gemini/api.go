@@ -12,6 +12,7 @@ type Request struct {
 	ImageBytes [][]byte `json:"image_bytes"`
 	Prompt     string   `json:"prompt"`
 	Model      string   `json:"model"`
+	TaskID     int      `json:"task_id"` // 添加TaskID字段
 }
 
 func Create(request Request) []image.Response {
@@ -26,6 +27,7 @@ func Create(request Request) []image.Response {
 			Model:      order.Model,
 		}
 		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, NewFlashImageParser())
+		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err).Msg("gemini-FlashImage")
