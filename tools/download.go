@@ -10,6 +10,9 @@ import (
 )
 
 func GetOnlineImage(url string) (bytes []byte, fName string, err error) {
+	if strings.TrimSpace(url) == "" {
+		return nil, "", fmt.Errorf("empty URL provided")
+	}
 	retry := 3
 label:
 	retry--
@@ -24,8 +27,13 @@ label:
 }
 
 func getOnlineImage(url string) (bytes []byte, fName string, err error) {
-	client := http.Client{}
-	req, _ := http.NewRequest("GET", url, nil)
+	client := http.Client{
+		Timeout: 100 * time.Second,
+	}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create request: %w", err)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return
