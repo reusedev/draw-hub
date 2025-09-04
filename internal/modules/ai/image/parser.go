@@ -47,6 +47,8 @@ type MarkdownImageStrategy struct{}
 
 func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 	var urls []string
+	var content string
+	
 	// 首先尝试解析JSON格式的聊天完成响应
 	var chatResp struct {
 		Choices []struct {
@@ -56,9 +58,48 @@ func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 		} `json:"choices"`
 	}
 	if err := jsoniter.Unmarshal(body, &chatResp); err == nil && len(chatResp.Choices) > 0 {
-		content := chatResp.Choices[0].Message.Content
-		markdownReg := `!\[.*?\]\((https?://[^)]+)\)`
-		pattern, _ := regexp.Compile(markdownReg)
+		content = chatResp.Choices[0].Message.Content
+	} else {
+		// 如果不是JSON格式，直接使用原始body作为内容
+		content = string(body)
+	}
+	
+	// 尝试提取markdown格式的图片链接
+	markdownReg := `!\[.*?\]\((https?://[^)]+)\)`
+	pattern, _ := regexp.Compile(markdownReg)
+	matches := pattern.FindAllStringSubmatch(content, -1)
+	for _, match := range matches {
+		if len(match) >= 2 {
+			url := match[1]
+			url = strings.ReplaceAll(url, "\\u0026", "&")
+			urls = append(urls, url)
+		}
+	}
+	
+	// 尝试解析JSON代码块中的图片链接（无论是否找到markdown图片）
+	jsonBlockReg := "```json\\s*\\n([\\s\\S]*?)\\n```"
+	jsonPattern, _ := regexp.Compile(jsonBlockReg)
+	jsonMatches := jsonPattern.FindAllStringSubmatch(content, -1)
+	for _, jsonMatch := range jsonMatches {
+		if len(jsonMatch) >= 2 {
+			var jsonData struct {
+				Image []string `json:"image"`
+			}
+			if err := jsoniter.Unmarshal([]byte(jsonMatch[1]), &jsonData); err == nil {
+				for _, imageURL := range jsonData.Image {
+					if imageURL != "" {
+						imageURL = strings.ReplaceAll(imageURL, "\\u0026", "&")
+						urls = append(urls, imageURL)
+					}
+				}
+			}
+		}
+	}
+	
+	// 如果仍然没有找到URL，尝试原来的正则表达式作为后备
+	if len(urls) == 0 {
+		reg := `(https?[^)]+)\)`
+		pattern, _ := regexp.Compile(reg)
 		matches := pattern.FindAllStringSubmatch(content, -1)
 		for _, match := range matches {
 			if len(match) >= 2 {
@@ -67,19 +108,8 @@ func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 				urls = append(urls, url)
 			}
 		}
-	} else {
-		// 如果JSON解析失败，尝试原来的正则表达式
-		reg := `(https?[^)]+)\)`
-		pattern, _ := regexp.Compile(reg)
-		matches := pattern.FindAllStringSubmatch(string(body), -1)
-		for _, match := range matches {
-			if len(match) >= 2 {
-				url := match[1]
-				url = strings.ReplaceAll(url, "\\u0026", "&")
-				urls = append(urls, url)
-			}
-		}
 	}
+	
 	return urls, nil
 }
 

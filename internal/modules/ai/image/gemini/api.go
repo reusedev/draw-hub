@@ -38,18 +38,14 @@ func Create(request Request) []image.Response {
 		}
 		ret = append(ret, response)
 		if response.Succeed() {
-			logs.Logger.Info().
-				Int("task_id", request.TaskID).
-				Str("supplier", order.Supplier).
-				Str("model", order.Model).
+			urls := response.GetURLs()
+			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
+				Str("model", order.Model).Strs("image_urls", urls).
 				Msg("Gemini Create request succeeded, stopping iteration")
 			break
 		} else {
-			logs.Logger.Warn().
-				Int("task_id", request.TaskID).
-				Str("supplier", order.Supplier).
-				Str("model", order.Model).
-				Msg("Gemini Create request completed but failed validation, continuing")
+			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
+				Str("model", order.Model).Msg("Gemini Create request completed but failed validation, continuing")
 		}
 	}
 		

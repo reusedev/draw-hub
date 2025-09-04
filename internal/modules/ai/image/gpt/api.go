@@ -47,8 +47,9 @@ func SlowSpeed(request SlowRequest) []image.Response {
 		}
 		ret = append(ret, response)
 		if response.Succeed() {
+			urls := response.GetURLs()
 			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
-				Str("model", order.Model).Msg("GPT SlowSpeed request succeeded, stopping iteration")
+				Str("model", order.Model).Strs("image_urls", urls).Msg("GPT SlowSpeed request succeeded, stopping iteration")
 			break
 		} else {
 			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
