@@ -202,7 +202,7 @@ func (s *StreamParser) extractContent(chunk []byte) []byte {
 		return []byte(chatResp.Choices[0].Delta.Content)
 	} else if err != nil {
 		// Log parsing errors for debugging (only in development)
-		logs.Logger.Debug().
+		logs.Logger.Info().
 			Err(err).
 			Str("chunk", string(chunk)).
 			Msg("Failed to parse SSE chunk")
@@ -213,8 +213,7 @@ func (s *StreamParser) extractContent(chunk []byte) []byte {
 func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 	defer resp.Body.Close()
 	var content strings.Builder
-	var urls []string
-	urlSet := make(map[string]struct{})
+	var totalChunks int
 	
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // Increase buffer size for large chunks
@@ -234,6 +233,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 			
 			// Skip [DONE] marker
 			if dataStr == "[DONE]" {
+				logs.Logger.Info().Msg("StreamParser: Received [DONE] marker")
 				break
 			}
 			
@@ -241,18 +241,31 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 			chunk := s.extractContent([]byte(dataStr))
 			if chunk != nil {
 				content.Write(chunk)
-				// Extract URLs from accumulated content
-				if extractedURLs, err := s.strategy.ExtractURLs([]byte(content.String())); err == nil {
-					for _, url := range extractedURLs {
-						if _, exists := urlSet[url]; !exists {
-							urlSet[url] = struct{}{}
-							urls = append(urls, url)
-						}
-					}
-				}
+				totalChunks++
+				// 不在流式过程中提取URL，等流结束后统一提取
 			}
 		}
 		// Ignore other SSE fields like event:, id:, retry:, etc.
+	}
+	
+	// 流结束后，从完整内容中提取URL
+	var urls []string
+	finalContent := content.String()
+	
+	// 记录最终的完整内容
+	logs.Logger.Info().
+		Str("final_content", finalContent).
+		Msg("StreamParser: Final accumulated content")
+	
+	if extractedURLs, err := s.strategy.ExtractURLs([]byte(finalContent)); err == nil {
+		// 去重
+		urlSet := make(map[string]struct{})
+		for _, url := range extractedURLs {
+			if _, exists := urlSet[url]; !exists {
+				urlSet[url] = struct{}{}
+				urls = append(urls, url)
+			}
+		}
 	}
 	
 	if err := scanner.Err(); err != nil {
