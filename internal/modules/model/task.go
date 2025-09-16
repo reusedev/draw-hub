@@ -87,7 +87,7 @@ type SupplierInvokeHistory struct {
 	TokenDesc      string    `json:"token_desc" gorm:"column:token_desc;type:varchar(20)"`
 	ModelName      string    `json:"model_name" gorm:"column:model_name;type:varchar(30)"`
 	StatusCode     int       `json:"status_code" gorm:"column:status_code;type:int"`
-	FailedRespBody string    `json:"failed_resp_body" gorm:"column:failed_resp_body;type:varchar(2000)"`
+	FailedRespBody string    `json:"failed_resp_body" gorm:"column:failed_resp_body;type:text"`
 	DurationMs     int64     `json:"duration_ms" gorm:"column:duration_ms;type:int"`
 	CreatedAt      time.Time `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
 }
