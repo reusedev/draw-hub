@@ -48,7 +48,7 @@ type MarkdownImageStrategy struct{}
 func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 	var urls []string
 	var content string
-	
+
 	// 首先尝试解析JSON格式的聊天完成响应
 	var chatResp struct {
 		Choices []struct {
@@ -63,7 +63,7 @@ func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 		// 如果不是JSON格式，直接使用原始body作为内容
 		content = string(body)
 	}
-	
+
 	// 尝试提取markdown格式的图片链接
 	markdownReg := `!\[.*?\]\((https?://[^)]+)\)`
 	pattern, _ := regexp.Compile(markdownReg)
@@ -75,7 +75,7 @@ func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 			urls = append(urls, url)
 		}
 	}
-	
+
 	// 尝试解析JSON代码块中的图片链接（无论是否找到markdown图片）
 	jsonBlockReg := "```json\\s*\\n([\\s\\S]*?)\\n```"
 	jsonPattern, _ := regexp.Compile(jsonBlockReg)
@@ -95,7 +95,7 @@ func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 			}
 		}
 	}
-	
+
 	// 如果仍然没有找到URL，尝试原来的正则表达式作为后备
 	if len(urls) == 0 {
 		reg := `(https?[^)]+)\)`
@@ -109,7 +109,7 @@ func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 			}
 		}
 	}
-	
+
 	return urls, nil
 }
 
@@ -214,29 +214,29 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 	defer resp.Body.Close()
 	var content strings.Builder
 	var totalChunks int
-	
+
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // Increase buffer size for large chunks
-	
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		
+
 		// Skip empty lines
 		if line == "" {
 			continue
 		}
-		
+
 		// Process SSE data lines
 		if strings.HasPrefix(line, "data: ") {
 			dataStr := strings.TrimPrefix(line, "data: ")
 			dataStr = strings.TrimSpace(dataStr)
-			
+
 			// Skip [DONE] marker
 			if dataStr == "[DONE]" {
 				logs.Logger.Info().Msg("StreamParser: Received [DONE] marker")
 				break
 			}
-			
+
 			// Try to parse the JSON chunk
 			chunk := s.extractContent([]byte(dataStr))
 			if chunk != nil {
@@ -247,16 +247,16 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 		}
 		// Ignore other SSE fields like event:, id:, retry:, etc.
 	}
-	
+
 	// 流结束后，从完整内容中提取URL
 	var urls []string
 	finalContent := content.String()
-	
+
 	// 记录最终的完整内容
 	logs.Logger.Info().
 		Str("final_content", finalContent).
 		Msg("StreamParser: Final accumulated content")
-	
+
 	if extractedURLs, err := s.strategy.ExtractURLs([]byte(finalContent)); err == nil {
 		// 去重
 		urlSet := make(map[string]struct{})
@@ -267,7 +267,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 			}
 		}
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		logs.Logger.Error().Err(err).Msg("Error reading SSE stream")
 		return err
@@ -311,6 +311,9 @@ var (
 		},
 		consts.V3.String() + consts.GPT4oImageVip.String(): {
 			"该任务的输入或者输出可能违反了OpenAI的相关服务政策，请重新发起请求或调整提示词进行重试": PromptError,
+		},
+		consts.Geek.String() + consts.GPTImage1.String(): {
+			"Your request may contain content that is not allowed by our safety system. Please try change the prompt and image.": PromptError,
 		},
 	}
 )
