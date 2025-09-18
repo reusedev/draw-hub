@@ -62,3 +62,7 @@ const (
 func (t TaskType) String() string {
 	return string(t)
 }
+
+const (
+	EventPoll = "poll"
+)

@@ -9,15 +9,15 @@ import (
 	"time"
 )
 
-type Requester struct {
+type SyncRequester struct {
 	token        ai.Token
 	RequestTypes RequestContent
 	Parser       Parser
 	TaskID       int // 添加TaskID字段用于日志跟踪
 }
 
-func NewRequester(token ai.Token, requestTypes RequestContent, parser Parser) *Requester {
-	return &Requester{
+func NewRequester(token ai.Token, requestTypes RequestContent, parser Parser) *SyncRequester {
+	return &SyncRequester{
 		token:        token,
 		RequestTypes: requestTypes,
 		Parser:       parser,
@@ -25,12 +25,17 @@ func NewRequester(token ai.Token, requestTypes RequestContent, parser Parser) *R
 	}
 }
 
-func (r *Requester) SetTaskID(taskID int) *Requester {
+func (r *SyncRequester) SetTaskID(taskID int) *SyncRequester {
 	r.TaskID = taskID
 	return r
 }
 
-func (r *Requester) Do() (Response, error) {
+type AsyncRequester struct {
+	token       ai.Token
+	RequestType RequestContent
+}
+
+func (r *SyncRequester) Do() (Response, error) {
 	client := http_client.New()
 	body, contentType, err := r.RequestTypes.BodyContentType(r.token.Supplier)
 	if err != nil {
