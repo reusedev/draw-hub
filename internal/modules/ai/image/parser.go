@@ -22,7 +22,7 @@ type Response interface {
 	GetRespAt() time.Time
 	FailedRespBody() string // != 200
 	DurationMs() int64
-	GetTaskID() int // 添加TaskID方法
+	GetTaskID() int
 
 	Succeed() bool
 	GetURLs() []string
@@ -31,7 +31,24 @@ type Response interface {
 	SetBasicResponse(statusCode int, respBody string, respAt time.Time)
 	SetURLs(urls []string)
 	SetError(err error)
-	SetTaskID(taskID int) // 添加设置TaskID的方法
+	SetTaskID(taskID int)
+}
+
+type AsyncAckResponse interface {
+	GetTaskID() int
+	GetProviderTaskID() int
+	GetError() error
+}
+
+type PollResponse interface {
+	GetTaskID() int
+	GetError() error
+	GetURLs() []string
+	NextQueryAt() time.Time
+}
+
+type SysExitResponse interface {
+	GetTaskID() int
 }
 
 type Parser interface {

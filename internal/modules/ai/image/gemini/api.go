@@ -1,12 +1,26 @@
 package gemini
 
 import (
+	"context"
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
+	"github.com/reusedev/draw-hub/internal/modules/observer"
 )
+
+type Provider struct {
+	Ctx       context.Context
+	Observers []observer.Observer
+}
+
+func NewProvider(ctx context.Context, observers []observer.Observer) *Provider {
+	return &Provider{
+		Ctx:       ctx,
+		Observers: observers,
+	}
+}
 
 type Request struct {
 	ImageBytes [][]byte `json:"image_bytes"`
@@ -15,7 +29,15 @@ type Request struct {
 	TaskID     int      `json:"task_id"` // 添加TaskID字段
 }
 
-func Create(request Request) []image.Response {
+func (p *Provider) Notify(event int, data interface{}) {
+	for _, o := range p.Observers {
+		o.Update(event, data)
+	}
+}
+
+func (p *Provider) Create(request Request) {
+	go func() {
+	}()
 	ret := make([]image.Response, 0)
 	for _, order := range config.GConfig.RequestOrder.Gemini25Flash {
 		if request.Model != "" && order.Model != request.Model {
@@ -48,6 +70,5 @@ func Create(request Request) []image.Response {
 				Str("model", order.Model).Msg("Gemini Create request completed but failed validation, continuing")
 		}
 	}
-		
-	return ret
+	p.Notify(consts.EventCompletion, ret)
 }

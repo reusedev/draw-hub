@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image/gemini"
+	"github.com/reusedev/draw-hub/internal/modules/observer"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -34,6 +35,7 @@ type TaskHandler struct {
 	ctx           *gin.Context
 	task          *model.Task
 	imageResponse []image.Response
+	wg            *sync.WaitGroup
 }
 
 func newTaskHandler(c *gin.Context) (*TaskHandler, error) {
@@ -66,7 +68,7 @@ func (h *TaskHandler) enqueue() {
 	queue.ImageTaskQueue <- h
 }
 
-func (h *TaskHandler) Fail(err error) {
+func (h *TaskHandler) fail(err error) {
 	// 记录任务异常失败日志
 	logs.Logger.Error().
 		Err(err).
@@ -74,14 +76,14 @@ func (h *TaskHandler) Fail(err error) {
 		Str("model", h.task.Model).
 		Str("status", "failed").
 		Msg("Task execution failed with exception")
-		
+
 	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
 		"status":        model.TaskStatusFailed.String(),
 		"failed_reason": "任务执行失败，请稍后重试",
 	})
 }
 
-func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
+func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) {
 	// 记录任务开始执行日志
 	logs.Logger.Info().
 		Int("task_id", h.task.Id).
@@ -89,46 +91,23 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) error {
 		Str("model", h.task.Model).
 		Str("status", "started").
 		Msg("Task execution started")
-
 	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
 		"status": model.TaskStatusRunning.String(),
 	})
-	down := make(chan struct{})
-	defer func() { down <- struct{}{} }()
-	go func() {
-		select {
-		case <-ctx.Done():
-			mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
-				"status": model.TaskStatusAborted.String(),
-			})
-			wg.Done()
-			return
-		case <-down:
-			wg.Done()
-			return
-		}
-	}()
+	h.wg = wg
 	switch h.task.Type {
 	case consts.TaskTypeEdit.String():
-		err := h.edit()
-		if err != nil {
-			return err
-		}
+		h.edit(ctx)
 	case consts.TaskTypeGenerate.String():
-		err := h.generate()
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown task type: %s", h.task.Type)
+		h.generate(ctx)
 	}
-	return nil
 }
 
-func (h *TaskHandler) edit() error {
+func (h *TaskHandler) edit(ctx context.Context) {
 	bs, err := h.inputImageBytes()
 	if err != nil {
-		return err
+		h.fail(err)
+		return
 	}
 	if h.task.Speed.Valid && h.task.Speed.String == consts.SlowSpeed.String() {
 		// 记录GPT慢速模式供应商调用日志
@@ -139,14 +118,13 @@ func (h *TaskHandler) edit() error {
 			Str("speed", "slow").
 			Str("operation", "edit").
 			Msg("Calling image supplier")
-
 		editRequest := gpt.SlowRequest{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Model:      h.task.Model,
 			TaskID:     h.task.Id, // 传递TaskID
 		}
-		h.imageResponse = gpt.SlowSpeed(editRequest)
+		gpt.NewProvider(ctx, []observer.Observer{h}).SlowSpeed(editRequest)
 	} else if h.task.Speed.Valid && h.task.Speed.String == consts.FastSpeed.String() {
 		// 记录GPT快速模式供应商调用日志
 		logs.Logger.Info().
@@ -164,7 +142,7 @@ func (h *TaskHandler) edit() error {
 			Size:       h.task.Size,
 			TaskID:     h.task.Id, // 传递TaskID
 		}
-		h.imageResponse = gpt.FastSpeed(editRequest)
+		gpt.NewProvider(ctx, []observer.Observer{h}).FastSpeed(editRequest)
 	} else if strings.HasPrefix(h.task.Model, "gemini") {
 		// 记录Gemini供应商调用日志
 		logs.Logger.Info().
@@ -180,18 +158,11 @@ func (h *TaskHandler) edit() error {
 			Model:      h.task.Model,
 			TaskID:     h.task.Id, // 传递TaskID
 		}
-		h.imageResponse = gemini.Create(req)
-	} else {
-		return fmt.Errorf("unknown speed: %s", h.task.Speed.String)
+		gemini.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	}
-	err = h.endWork()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
-func (h *TaskHandler) generate() error {
+func (h *TaskHandler) generate(ctx context.Context) {
 	if strings.HasPrefix(h.task.Model, "gemini") {
 		// 记录Gemini供应商调用日志
 		logs.Logger.Info().
@@ -206,7 +177,7 @@ func (h *TaskHandler) generate() error {
 			Model:  h.task.Model,
 			TaskID: h.task.Id, // 传递TaskID
 		}
-		h.imageResponse = gemini.Create(req)
+		gemini.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else {
 		// 记录GPT供应商调用日志
 		logs.Logger.Info().
@@ -221,13 +192,8 @@ func (h *TaskHandler) generate() error {
 			Model:  h.task.Model,
 			TaskID: h.task.Id, // 传递TaskID
 		}
-		h.imageResponse = gpt.SlowSpeed(genRequest)
+		gpt.NewProvider(ctx, []observer.Observer{h}).SlowSpeed(genRequest)
 	}
-	err := h.endWork()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (h *TaskHandler) inputImageBytes() (ret [][]byte, err error) {
@@ -528,6 +494,25 @@ func (h *TaskHandler) recordSupplierInvoke() error {
 	return nil
 }
 
+func (h *TaskHandler) Update(event int, data interface{}) {
+	if event == consts.EventCompletion {
+		defer h.wg.Done()
+		h.imageResponse = data.([]image.Response)
+		err := h.endWork()
+		if err != nil {
+			h.fail(err)
+		}
+	} else if event == consts.EventPoll {
+
+	} else if event == consts.EventSysExit {
+		data := data.(image.SysExitResponse)
+		err := mysql.DB.Model(&model.Task{}).Where("id = ?", data.GetTaskID()).Update("status", model.TaskStatusAborted).Error
+		if err != nil {
+			logs.Logger.Error().Err(err).Msg("Update task status error")
+		}
+	}
+}
+
 func (h *TaskHandler) endWork() error {
 	err := h.recordSupplierInvoke()
 	if err != nil {
@@ -553,7 +538,7 @@ func (h *TaskHandler) endWork() error {
 			if err != nil {
 				return err
 			}
-			
+
 			// 记录任务成功完成日志
 			logs.Logger.Info().
 				Int("task_id", h.task.Id).
@@ -586,7 +571,7 @@ func (h *TaskHandler) endWork() error {
 		if err != nil {
 			return err
 		}
-		
+
 		// 记录任务失败日志
 		logs.Logger.Error().
 			Int("task_id", h.task.Id).

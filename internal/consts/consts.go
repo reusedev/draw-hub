@@ -64,5 +64,8 @@ func (t TaskType) String() string {
 }
 
 const (
-	EventPoll = "poll"
+	EventCompletionAck = iota
+	EventCompletion
+	EventPoll
+	EventSysExit
 )

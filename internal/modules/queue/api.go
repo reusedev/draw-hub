@@ -16,10 +16,7 @@ func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
 			if ok {
 				wg.Add(1)
 				go func() {
-					err := task.Execute(ctx, wg)
-					if err != nil {
-						task.Fail(err)
-					}
+					task.Execute(ctx, wg)
 				}()
 			} else {
 				wg.Done()

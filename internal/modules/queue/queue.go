@@ -6,8 +6,7 @@ import (
 )
 
 type Task interface {
-	Execute(ctx context.Context, wg *sync.WaitGroup) error
-	Fail(err error)
+	Execute(ctx context.Context, wg *sync.WaitGroup)
 }
 
 type TaskQueue chan Task
