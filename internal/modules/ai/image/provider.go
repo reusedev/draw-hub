@@ -1,6 +1,5 @@
 package image
 
 type AsyncProvider interface {
-	Create() AsyncAckResponse
-	Query() PollResponse
+	Query(ptId int) AsyncQueryResponse
 }

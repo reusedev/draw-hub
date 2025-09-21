@@ -495,14 +495,14 @@ func (h *TaskHandler) recordSupplierInvoke() error {
 }
 
 func (h *TaskHandler) Update(event int, data interface{}) {
-	if event == consts.EventCompletion {
+	if event == consts.EventSyncCreate {
 		defer h.wg.Done()
 		h.imageResponse = data.([]image.Response)
 		err := h.endWork()
 		if err != nil {
 			h.fail(err)
 		}
-	} else if event == consts.EventPoll {
+	} else if event == consts.EventAsyncQuery {
 
 	} else if event == consts.EventSysExit {
 		data := data.(image.SysExitResponse)

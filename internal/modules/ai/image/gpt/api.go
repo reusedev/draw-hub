@@ -88,7 +88,7 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 				Str("model", order.Model).Msg("GPT SlowSpeed request completed but failed validation, continuing")
 		}
 	}
-	p.Notify(consts.EventCompletion, ret)
+	p.Notify(consts.EventSyncCreate, ret)
 }
 
 func (p *Provider) FastSpeed(request FastRequest) {
@@ -154,5 +154,5 @@ func (p *Provider) FastSpeed(request FastRequest) {
 				Msg("GPT FastSpeed request completed but failed validation, continuing")
 		}
 	}
-	p.Notify(consts.EventCompletion, ret)
+	p.Notify(consts.EventSyncCreate, ret)
 }

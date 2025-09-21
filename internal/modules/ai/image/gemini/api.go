@@ -70,5 +70,5 @@ func (p *Provider) Create(request Request) {
 				Str("model", order.Model).Msg("Gemini Create request completed but failed validation, continuing")
 		}
 	}
-	p.Notify(consts.EventCompletion, ret)
+	p.Notify(consts.EventSyncCreate, ret)
 }

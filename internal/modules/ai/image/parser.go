@@ -34,25 +34,32 @@ type Response interface {
 	SetTaskID(taskID int)
 }
 
-type AsyncAckResponse interface {
+type AsyncCreateResponse interface {
 	GetTaskID() int
 	GetProviderTaskID() int
 	GetError() error
+
+	SetBasicResponse(statusCode int, respBody string, respAt time.Time)
+	SetTaskID(taskID int)
+	SetError(err error)
+	SetProviderTaskID(ptID int)
 }
 
-type PollResponse interface {
+type AsyncQueryResponse interface {
 	GetTaskID() int
+	GetProviderTaskId() int
 	GetError() error
 	GetURLs() []string
-	NextQueryAt() time.Time
+
+	SetBasicResponse(statusCode int, respBody string, respAt time.Time)
 }
 
 type SysExitResponse interface {
 	GetTaskID() int
 }
 
-type Parser interface {
-	Parse(resp *http.Response, response Response) error
+type Parser[T any] interface {
+	Parse(resp *http.Response, response T) error
 }
 
 type ParseStrategy interface {
