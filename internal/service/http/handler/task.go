@@ -707,14 +707,9 @@ func saveNormalImage(image []byte, t time.Time, supplier string) (relativePath s
 }
 
 func saveCompressionImage(image []byte, quality int, t time.Time, supplier string) (relativePath string, ratio float64, err error) {
-	var compressionBytes []byte
-	if tools.DetectImageType(image) == tools.ImageTypeJPEG {
-		compressionBytes = image
-	} else {
-		compressionBytes, err = tools.ConvertAndCompressPNGtoJPEG(image, quality)
-		if err != nil {
-			return
-		}
+	compressionBytes, err := tools.ConvertAndCompressToJPEG(image, quality)
+	if err != nil {
+		return
 	}
 	ratio = float64(len(compressionBytes)) / float64(len(image))
 	relativePath = filepath.Join("output", "c", t.Format("20060102"), supplier, uuid.New().String()+"."+tools.DetectImageType(compressionBytes).String())
@@ -736,14 +731,9 @@ func saveThumbnailImage(image []byte, t time.Time, supplier string) (relativePat
 }
 
 func saveCompressionThumbnailImage(image []byte, quality int, t time.Time, supplier string) (relativePath string, err error) {
-	var compressionBytes []byte
-	if tools.DetectImageType(image) == tools.ImageTypeJPEG {
-		compressionBytes = image
-	} else {
-		compressionBytes, err = tools.ConvertAndCompressPNGtoJPEG(image, quality)
-		if err != nil {
-			return
-		}
+	compressionBytes, err := tools.ConvertAndCompressToJPEG(image, quality)
+	if err != nil {
+		return
 	}
 	format, err := tools.DetectImageType(compressionBytes).ImagingFormat()
 	if err != nil {
@@ -774,14 +764,9 @@ func uploadNormalImage(image []byte) (normal ali.OSSObject, err error) {
 }
 
 func uploadCompressionImage(image []byte, quality int) (compression ali.OSSObject, ratio float64, err error) {
-	var compressionBytes []byte
-	if tools.DetectImageType(image) == tools.ImageTypeJPEG {
-		compressionBytes = image
-	} else {
-		compressionBytes, err = tools.ConvertAndCompressPNGtoJPEG(image, quality)
-		if err != nil {
-			return
-		}
+	compressionBytes, err := tools.ConvertAndCompressToJPEG(image, quality)
+	if err != nil {
+		return
 	}
 	ratio = float64(len(compressionBytes)) / float64(len(image))
 	key, err := ali.OssClient.UploadPrivateImage(compressionBytes)
