@@ -34,26 +34,6 @@ type Response interface {
 	SetTaskID(taskID int)
 }
 
-type AsyncCreateResponse interface {
-	GetTaskID() int
-	GetProviderTaskID() int
-	GetError() error
-
-	SetBasicResponse(statusCode int, respBody string, respAt time.Time)
-	SetTaskID(taskID int)
-	SetError(err error)
-	SetProviderTaskID(ptID int)
-}
-
-type AsyncQueryResponse interface {
-	GetTaskID() int
-	GetProviderTaskId() int
-	GetError() error
-	GetURLs() []string
-
-	SetBasicResponse(statusCode int, respBody string, respAt time.Time)
-}
-
 type SysExitResponse interface {
 	GetTaskID() int
 }
@@ -64,7 +44,6 @@ type Parser[T any] interface {
 
 type ParseStrategy interface {
 	ExtractURLs(body []byte) ([]string, error)
-	ValidateResponse(response Response) bool
 }
 
 type MarkdownImageStrategy struct{}
@@ -137,10 +116,6 @@ func (m *MarkdownImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 	return urls, nil
 }
 
-func (m *MarkdownImageStrategy) ValidateResponse(response Response) bool {
-	return len(response.GetURLs()) > 0
-}
-
 type OpenAIImageStrategy struct{}
 
 func (o *OpenAIImageStrategy) ExtractURLs(body []byte) ([]string, error) {
@@ -164,10 +139,6 @@ func (o *OpenAIImageStrategy) ExtractURLs(body []byte) ([]string, error) {
 	return urls, nil
 }
 
-func (o *OpenAIImageStrategy) ValidateResponse(response Response) bool {
-	return len(response.GetURLs()) > 0
-}
-
 type GenericParser struct {
 	strategy ParseStrategy
 }
@@ -187,7 +158,7 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 		return err
 	}
 	response.SetURLs(urls)
-	if !g.strategy.ValidateResponse(response) {
+	if !response.Succeed() {
 		logs.Logger.Warn().
 			Int("task_id", response.GetTaskID()).
 			Str("supplier", response.GetSupplier()).
@@ -299,7 +270,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 	bodyString := content.String()
 	response.SetBasicResponse(resp.StatusCode, bodyString, time.Now())
 	response.SetURLs(urls)
-	if !s.strategy.ValidateResponse(response) {
+	if !response.Succeed() {
 		logs.Logger.Warn().
 			Int("task_id", response.GetTaskID()).
 			Str("supplier", response.GetSupplier()).

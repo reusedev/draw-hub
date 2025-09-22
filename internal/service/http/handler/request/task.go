@@ -93,6 +93,7 @@ type Create struct {
 	GroupId   string `form:"group_id"`
 	ImageIds  []int  `form:"image_ids"`
 	Prompt    string `form:"prompt"`
+	Size      string `form:"size"`
 }
 
 func (c *Create) TaskType() string {

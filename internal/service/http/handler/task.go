@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image/gemini"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image/volc"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
 	"net/http"
 	"path/filepath"
@@ -109,84 +110,66 @@ func (h *TaskHandler) edit(ctx context.Context) {
 		h.fail(err)
 		return
 	}
+	logs.Logger.Info().
+		Int("task_id", h.task.Id).
+		Str("model", h.task.Model).
+		Msg("Calling image supplier")
 	if h.task.Speed.Valid && h.task.Speed.String == consts.SlowSpeed.String() {
-		// 记录GPT慢速模式供应商调用日志
-		logs.Logger.Info().
-			Int("task_id", h.task.Id).
-			Str("supplier", "gpt").
-			Str("model", h.task.Model).
-			Str("speed", "slow").
-			Str("operation", "edit").
-			Msg("Calling image supplier")
 		editRequest := gpt.SlowRequest{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Model:      h.task.Model,
-			TaskID:     h.task.Id, // 传递TaskID
+			TaskID:     h.task.Id,
 		}
 		gpt.NewProvider(ctx, []observer.Observer{h}).SlowSpeed(editRequest)
 	} else if h.task.Speed.Valid && h.task.Speed.String == consts.FastSpeed.String() {
-		// 记录GPT快速模式供应商调用日志
-		logs.Logger.Info().
-			Int("task_id", h.task.Id).
-			Str("supplier", "gpt").
-			Str("model", h.task.Model).
-			Str("speed", "fast").
-			Str("operation", "edit").
-			Msg("Calling image supplier")
-
 		editRequest := gpt.FastRequest{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Quality:    h.task.Quality,
 			Size:       h.task.Size,
-			TaskID:     h.task.Id, // 传递TaskID
+			TaskID:     h.task.Id,
 		}
 		gpt.NewProvider(ctx, []observer.Observer{h}).FastSpeed(editRequest)
 	} else if strings.HasPrefix(h.task.Model, "gemini") {
-		// 记录Gemini供应商调用日志
-		logs.Logger.Info().
-			Int("task_id", h.task.Id).
-			Str("supplier", "gemini").
-			Str("model", h.task.Model).
-			Str("operation", "edit").
-			Msg("Calling image supplier")
-
 		req := gemini.Request{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Model:      h.task.Model,
-			TaskID:     h.task.Id, // 传递TaskID
+			TaskID:     h.task.Id,
 		}
 		gemini.NewProvider(ctx, []observer.Observer{h}).Create(req)
+	} else if strings.HasPrefix(h.task.Model, "jimeng") {
+		req := volc.Request{
+			ImageBytes: bs,
+			Prompt:     h.task.Prompt,
+			Size:       h.task.Size,
+			TaskID:     h.task.Id,
+		}
+		volc.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	}
 }
 
 func (h *TaskHandler) generate(ctx context.Context) {
+	logs.Logger.Info().
+		Int("task_id", h.task.Id).
+		Str("model", h.task.Model).
+		Msg("Calling image supplier")
 	if strings.HasPrefix(h.task.Model, "gemini") {
-		// 记录Gemini供应商调用日志
-		logs.Logger.Info().
-			Int("task_id", h.task.Id).
-			Str("supplier", "gemini").
-			Str("model", h.task.Model).
-			Str("operation", "generate").
-			Msg("Calling image supplier")
-
 		req := gemini.Request{
 			Prompt: h.task.Prompt,
 			Model:  h.task.Model,
 			TaskID: h.task.Id, // 传递TaskID
 		}
 		gemini.NewProvider(ctx, []observer.Observer{h}).Create(req)
+	} else if strings.HasPrefix(h.task.Model, "jimeng") {
+		req := volc.Request{
+			Prompt: h.task.Prompt,
+			Size:   h.task.Size,
+			TaskID: h.task.Id,
+		}
+		volc.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else {
-		// 记录GPT供应商调用日志
-		logs.Logger.Info().
-			Int("task_id", h.task.Id).
-			Str("supplier", "gpt").
-			Str("model", h.task.Model).
-			Str("operation", "generate").
-			Msg("Calling image supplier")
-
 		genRequest := gpt.SlowRequest{
 			Prompt: h.task.Prompt,
 			Model:  h.task.Model,
@@ -312,6 +295,7 @@ func (h *TaskHandler) createTask(form *request.Create) error {
 		Type:        form.TaskType(),
 		Prompt:      form.Prompt,
 		Model:       form.Model,
+		Size:        form.Size,
 		Status:      model.TaskStatusPending.String(),
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -383,7 +367,7 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 		}
 		thumbnailPath, err := saveThumbnailImage(imageBytes, h.task.CreatedAt, imageResp.GetSupplier())
 		if err != nil {
-			return err
+			logs.Logger.Err(err).Msg("save thumbnail image error")
 		}
 		imageRecord := model.OutputImage{
 			Path:              path,
@@ -434,7 +418,7 @@ func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 		}
 		thumbnailPath, err := saveCompressionThumbnailImage(imageBytes, 95, h.task.CreatedAt, imageResp.GetSupplier())
 		if err != nil {
-			return err
+			logs.Logger.Err(err).Msg("save thumbnail image error")
 		}
 		imageRecord := model.OutputImage{
 			Path:              path,
@@ -723,9 +707,14 @@ func saveNormalImage(image []byte, t time.Time, supplier string) (relativePath s
 }
 
 func saveCompressionImage(image []byte, quality int, t time.Time, supplier string) (relativePath string, ratio float64, err error) {
-	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(image, quality)
-	if err != nil {
-		return
+	var compressionBytes []byte
+	if tools.DetectImageType(image) == tools.ImageTypeJPEG {
+		compressionBytes = image
+	} else {
+		compressionBytes, err = tools.ConvertAndCompressPNGtoJPEG(image, quality)
+		if err != nil {
+			return
+		}
 	}
 	ratio = float64(len(compressionBytes)) / float64(len(image))
 	relativePath = filepath.Join("output", "c", t.Format("20060102"), supplier, uuid.New().String()+"."+tools.DetectImageType(compressionBytes).String())
@@ -747,9 +736,14 @@ func saveThumbnailImage(image []byte, t time.Time, supplier string) (relativePat
 }
 
 func saveCompressionThumbnailImage(image []byte, quality int, t time.Time, supplier string) (relativePath string, err error) {
-	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(image, quality)
-	if err != nil {
-		return
+	var compressionBytes []byte
+	if tools.DetectImageType(image) == tools.ImageTypeJPEG {
+		compressionBytes = image
+	} else {
+		compressionBytes, err = tools.ConvertAndCompressPNGtoJPEG(image, quality)
+		if err != nil {
+			return
+		}
 	}
 	format, err := tools.DetectImageType(compressionBytes).ImagingFormat()
 	if err != nil {
@@ -780,9 +774,14 @@ func uploadNormalImage(image []byte) (normal ali.OSSObject, err error) {
 }
 
 func uploadCompressionImage(image []byte, quality int) (compression ali.OSSObject, ratio float64, err error) {
-	compressionBytes, err := tools.ConvertAndCompressPNGtoJPEG(image, quality)
-	if err != nil {
-		return
+	var compressionBytes []byte
+	if tools.DetectImageType(image) == tools.ImageTypeJPEG {
+		compressionBytes = image
+	} else {
+		compressionBytes, err = tools.ConvertAndCompressPNGtoJPEG(image, quality)
+		if err != nil {
+			return
+		}
 	}
 	ratio = float64(len(compressionBytes)) / float64(len(image))
 	key, err := ali.OssClient.UploadPrivateImage(compressionBytes)

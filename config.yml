@@ -98,7 +98,6 @@ request_order:
       token: "sk-"
       desc: "openai_channel"
       model: "gpt-image-1"
-  # grok deepsearch
   deepsearch:
     -
       supplier: "geek"
@@ -121,3 +120,25 @@ request_order:
       token: "sk-"
       desc: "low_price"
       model: "gemini-2.5-flash-image"
+  gemini_25_flash_hd:
+    -
+      supplier: "tuzi"
+      token: "sk-"
+      desc: "default"
+      model: "gemini-2.5-flash-image-hd"
+    -
+      supplier: "geek"
+      token: "sk-"
+      desc: "low_price"
+      model: "gemini-2.5-flash-image-hd"
+  jimeng_v40:
+    -
+      supplier: "tuzi"
+      token: "sk-"
+      desc: "default"
+      model: "doubao-seedream-4-0-250828"
+    -
+      supplier: "geek"
+      token: "sk-"
+      desc: "low_price"
+      model: "doubao-seedream-4.0"

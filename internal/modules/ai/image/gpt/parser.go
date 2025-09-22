@@ -27,18 +27,6 @@ func NewImage1Parser() *Image1Parser {
 	}
 }
 
-type OpenAIWithBase64Strategy struct {
-	*image.OpenAIImageStrategy
-}
-
-func (o *OpenAIWithBase64Strategy) ExtractURLs(body []byte) ([]string, error) {
-	urls, err := o.OpenAIImageStrategy.ExtractURLs(body)
-	if err != nil {
-		return nil, err
-	}
-	return urls, nil
-}
-
 type Image4oResponse struct {
 	Supplier   string        `json:"supplier"`
 	TokenDesc  string        `json:"token_desc"`

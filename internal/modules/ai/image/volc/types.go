@@ -9,45 +9,23 @@ import (
 	"time"
 )
 
-// JiMengV40Request Reference: https://www.volcengine.com/docs/85621/1817045
+// JiMengV40Request Reference: https://tuzi-api.apifox.cn/349741169e0
 type JiMengV40Request struct {
-	ReqKey      string   // 服务标识 jimeng_t2i_v40
-	ImageUrls   []string // 0-10张图
-	Prompt      string
-	Size        int
-	Width       int
-	Height      int
-	Scale       float32
-	ForceSingle bool
-	MinRatio    float32
-	MaxRatio    float32
+	Model      string
+	ImageBytes [][]byte
+	Prompt     string
+	Size       string
 }
 
 func (j *JiMengV40Request) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
 	body := make(map[string]any)
-	body["req_key"] = j.ReqKey
-	if len(j.ImageUrls) != 0 {
-		body["image_urls"] = j.ImageUrls
+	body["model"] = j.Model
+	if len(j.ImageBytes) != 0 {
+		body["image"] = j.ImageBytes
 	}
 	body["prompt"] = j.Prompt
-	if j.Size != 0 {
+	if j.Size != "" {
 		body["size"] = j.Size
-	}
-	if j.Width != 0 {
-		body["width"] = j.Width
-	}
-	if j.Height != 0 {
-		body["height"] = j.Height
-	}
-	if j.Scale != 0 {
-		body["scale"] = j.Scale
-	}
-	body["force_single"] = j.ForceSingle
-	if j.MinRatio != 0 {
-		body["min_ratio"] = j.MinRatio
-	}
-	if j.MaxRatio != 0 {
-		body["max_ratio"] = j.MaxRatio
 	}
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -57,10 +35,10 @@ func (j *JiMengV40Request) BodyContentType(supplier consts.ModelSupplier) (io.Re
 }
 
 func (j *JiMengV40Request) Path() string {
-	return "?Action=CVSync2AsyncSubmitTask&Version=2022-08-31"
+	return "/v1/images/generations"
 }
 
-func (j *JiMengV40Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.AsyncCreateResponse {
+func (j *JiMengV40Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
 	return &CreateResponse{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,

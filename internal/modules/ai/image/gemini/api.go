@@ -39,10 +39,7 @@ func (p *Provider) Create(request Request) {
 	go func() {
 	}()
 	ret := make([]image.Response, 0)
-	for _, order := range config.GConfig.RequestOrder.Gemini25Flash {
-		if request.Model != "" && order.Model != request.Model {
-			continue
-		}
+	for _, order := range config.GetRequestOrder(consts.Model(request.Model)) {
 		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
 			Str("token_desc", order.Desc).Str("model", order.Model).Msg("Attempting Gemini Create request")
 		content := FlashImageRequest{

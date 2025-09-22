@@ -123,10 +123,12 @@ type MySQL struct {
 }
 
 type RequestOrder struct {
-	SlowSpeed     []Request `yaml:"slow_speed"`
-	FastSpeed     []Request `yaml:"fast_speed"`
-	DeepSearch    []Request `yaml:"deepsearch"`
-	Gemini25Flash []Request `yaml:"gemini_25_flash"`
+	SlowSpeed       []Request `yaml:"slow_speed"`
+	FastSpeed       []Request `yaml:"fast_speed"`
+	DeepSearch      []Request `yaml:"deepsearch"`
+	Gemini25Flash   []Request `yaml:"gemini_25_flash"`
+	Gemini25FlashHD []Request `yaml:"gemini_25_flash_hd"`
+	JiMengV40       []Request `yaml:"jimeng_v40"`
 }
 
 type Request struct {
@@ -134,4 +136,17 @@ type Request struct {
 	Token    string `json:"token"`
 	Desc     string `json:"desc"`
 	Model    string `json:"model"`
+}
+
+func GetRequestOrder(model consts.Model) []Request {
+	switch model {
+	case consts.Gemini25Flash:
+		return GConfig.RequestOrder.Gemini25Flash
+	case consts.Gemini25FlashHD:
+		return GConfig.RequestOrder.Gemini25FlashHD
+	case consts.JiMengV40:
+		return GConfig.RequestOrder.JiMengV40
+	default:
+		return nil
+	}
 }
