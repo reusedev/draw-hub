@@ -461,14 +461,23 @@ func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 func (h *TaskHandler) recordSupplierInvoke() error {
 	for _, v := range h.imageResponse {
 		exeRecord := model.SupplierInvokeHistory{
-			TaskId:         h.task.Id,
-			SupplierName:   v.GetSupplier(),
-			TokenDesc:      v.GetTokenDesc(),
-			ModelName:      v.GetModel(),
-			StatusCode:     v.GetStatusCode(),
-			FailedRespBody: v.FailedRespBody(),
-			DurationMs:     v.DurationMs(),
-			CreatedAt:      v.GetRespAt(),
+			TaskId:       h.task.Id,
+			SupplierName: v.GetSupplier(),
+			TokenDesc:    v.GetTokenDesc(),
+			ModelName:    v.GetModel(),
+			StatusCode:   v.GetStatusCode(),
+			DurationMs:   v.DurationMs(),
+			CreatedAt:    v.GetRespAt(),
+		}
+		respBody := v.GetRespBody()
+		if v.GetStatusCode() != http.StatusOK {
+			exeRecord.FailedRespBody = respBody
+		}
+		if v.GetError() != nil {
+			if len(respBody) < 10000 {
+				exeRecord.FailedRespBody = respBody
+			}
+			exeRecord.Error = v.GetError().Error()
 		}
 		err := mysql.DB.Model(&model.SupplierInvokeHistory{}).Create(&exeRecord).Error
 		if err != nil {

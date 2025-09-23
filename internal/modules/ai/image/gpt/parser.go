@@ -1,7 +1,6 @@
 package gpt
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
@@ -55,11 +54,8 @@ func (r *Image4oResponse) GetStatusCode() int {
 func (r *Image4oResponse) GetRespAt() time.Time {
 	return r.RespAt
 }
-func (r *Image4oResponse) FailedRespBody() string {
-	if r.StatusCode != http.StatusOK {
-		return r.RespBody
-	}
-	return ""
+func (r *Image4oResponse) GetRespBody() string {
+	return r.RespBody
 }
 func (r *Image4oResponse) DurationMs() int64 {
 	return r.Duration.Milliseconds()
@@ -125,11 +121,8 @@ func (r *Image1Response) GetStatusCode() int {
 func (r *Image1Response) GetRespAt() time.Time {
 	return r.RespAt
 }
-func (r *Image1Response) FailedRespBody() string {
-	if r.StatusCode != http.StatusOK {
-		return r.RespBody
-	}
-	return ""
+func (r *Image1Response) GetRespBody() string {
+	return r.RespBody
 }
 func (r *Image1Response) DurationMs() int64 {
 	return r.Duration.Milliseconds()

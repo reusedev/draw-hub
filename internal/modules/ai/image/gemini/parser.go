@@ -1,7 +1,6 @@
 package gemini
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
@@ -45,11 +44,8 @@ func (f *FlashImageResponse) GetStatusCode() int {
 func (f *FlashImageResponse) GetRespAt() time.Time {
 	return f.RespAt
 }
-func (f *FlashImageResponse) FailedRespBody() string {
-	if f.StatusCode != http.StatusOK {
-		return f.RespBody
-	}
-	return ""
+func (f *FlashImageResponse) GetRespBody() string {
+	return f.RespBody
 }
 func (f *FlashImageResponse) DurationMs() int64 {
 	return f.Duration.Milliseconds()

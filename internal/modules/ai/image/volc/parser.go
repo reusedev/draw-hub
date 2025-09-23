@@ -3,7 +3,6 @@ package volc
 import (
 	"encoding/json"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
-	"net/http"
 	"time"
 )
 
@@ -79,11 +78,8 @@ func (r *CreateResponse) GetStatusCode() int {
 func (r *CreateResponse) GetRespAt() time.Time {
 	return r.RespAt
 }
-func (r *CreateResponse) FailedRespBody() string {
-	if r.StatusCode != http.StatusOK {
-		return r.RespBody
-	}
-	return ""
+func (r *CreateResponse) GetRespBody() string {
+	return r.RespBody
 }
 func (r *CreateResponse) DurationMs() int64 {
 	return r.Duration.Milliseconds()

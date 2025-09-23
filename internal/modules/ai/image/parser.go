@@ -20,7 +20,7 @@ type Response interface {
 	GetTokenDesc() string
 	GetStatusCode() int
 	GetRespAt() time.Time
-	FailedRespBody() string // != 200
+	GetRespBody() string
 	DurationMs() int64
 	GetTaskID() int
 
@@ -170,7 +170,7 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 			Int64("duration", response.DurationMs()).
 			Str("body", string(body)).
 			Msg("image resp error")
-		if detectedErr := DetectError(response.GetSupplier(), response.GetModel(), string(body)); detectedErr != nil {
+		if detectedErr := DetectError(response.GetSupplier(), response.GetModel(), string(body), response.GetURLs()); detectedErr != nil {
 			response.SetError(detectedErr)
 		}
 	}
@@ -206,6 +206,12 @@ func (s *StreamParser) extractContent(chunk []byte) []byte {
 }
 
 func (s *StreamParser) Parse(resp *http.Response, response Response) error {
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		response.SetBasicResponse(resp.StatusCode, string(body), time.Now())
+		response.SetError(StatusCodeError)
+		return nil
+	}
 	defer resp.Body.Close()
 	var content strings.Builder
 	var totalChunks int
@@ -282,7 +288,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 			Int64("duration", response.DurationMs()).
 			Str("body", bodyString).
 			Msg("stream image resp error")
-		if detectedErr := DetectError(response.GetSupplier(), response.GetModel(), bodyString); detectedErr != nil {
+		if detectedErr := DetectError(response.GetSupplier(), response.GetModel(), bodyString, response.GetURLs()); detectedErr != nil {
 			response.SetError(detectedErr)
 		}
 	}
@@ -290,7 +296,9 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 }
 
 var (
-	PromptError = errors.New("system judge that the prompt is not suitable for image generation, please try again with a different prompt")
+	PromptError     = errors.New("图片检测系统认为内容可能违反相关政策")
+	NoImageError    = errors.New("未提取到图片")
+	StatusCodeError = errors.New("http状态码非200")
 )
 
 var (
@@ -313,13 +321,16 @@ var (
 	}
 )
 
-func DetectError(supplier, model, body string) error {
+func DetectError(supplier, model, body string, urls []string) error {
 	if errs, ok := errorMap[supplier+model]; ok {
 		for key, err := range errs {
 			if strings.Contains(body, key) {
 				return err
 			}
 		}
+	}
+	if len(urls) == 0 {
+		return NoImageError
 	}
 	return nil
 }
