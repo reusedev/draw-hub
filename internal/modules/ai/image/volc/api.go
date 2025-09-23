@@ -8,6 +8,7 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
+	"sync"
 )
 
 type Provider struct {
@@ -36,7 +37,22 @@ type Request struct {
 }
 
 func (p *Provider) Create(request Request) {
-	go func() {}()
+	var once sync.Once
+	down := make(chan struct{})
+	defer func() { down <- struct{}{} }()
+	go func() {
+		select {
+		case <-p.Ctx.Done():
+			once.Do(func() {
+				p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
+					TaskID: request.TaskID,
+				})
+			})
+			return
+		case <-down:
+			return
+		}
+	}()
 	ret := make([]image.Response, 0)
 	for _, order := range config.GConfig.RequestOrder.JiMengV40 {
 		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
@@ -67,5 +83,5 @@ func (p *Provider) Create(request Request) {
 				Str("model", order.Model).Msg("JiMeng Create request completed but failed validation, continuing")
 		}
 	}
-	p.Notify(consts.EventSyncCreate, ret)
+	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
 }

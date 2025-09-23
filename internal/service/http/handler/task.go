@@ -479,15 +479,13 @@ func (h *TaskHandler) recordSupplierInvoke() error {
 }
 
 func (h *TaskHandler) Update(event int, data interface{}) {
+	defer h.wg.Done()
 	if event == consts.EventSyncCreate {
-		defer h.wg.Done()
 		h.imageResponse = data.([]image.Response)
 		err := h.endWork()
 		if err != nil {
 			h.fail(err)
 		}
-	} else if event == consts.EventAsyncQuery {
-
 	} else if event == consts.EventSysExit {
 		data := data.(image.SysExitResponse)
 		err := mysql.DB.Model(&model.Task{}).Where("id = ?", data.GetTaskID()).Update("status", model.TaskStatusAborted).Error

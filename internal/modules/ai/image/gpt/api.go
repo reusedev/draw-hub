@@ -8,6 +8,7 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
+	"sync"
 )
 
 type Provider struct {
@@ -44,13 +45,17 @@ type SlowRequest struct {
 }
 
 func (p *Provider) SlowSpeed(request SlowRequest) {
-	// todo 程序结束Notify
+	var once sync.Once
 	down := make(chan struct{})
 	defer func() { down <- struct{}{} }()
 	go func() {
 		select {
 		case <-p.Ctx.Done():
-
+			once.Do(func() {
+				p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
+					TaskID: request.TaskID,
+				})
+			})
 			return
 		case <-down:
 			return
@@ -88,10 +93,26 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 				Str("model", order.Model).Msg("GPT SlowSpeed request completed but failed validation, continuing")
 		}
 	}
-	p.Notify(consts.EventSyncCreate, ret)
+	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
 }
 
 func (p *Provider) FastSpeed(request FastRequest) {
+	var once sync.Once
+	down := make(chan struct{})
+	defer func() { down <- struct{}{} }()
+	go func() {
+		select {
+		case <-p.Ctx.Done():
+			once.Do(func() {
+				p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
+					TaskID: request.TaskID,
+				})
+			})
+			return
+		case <-down:
+			return
+		}
+	}()
 	// 记录方法开始执行日志
 	logs.Logger.Info().
 		Int("task_id", request.TaskID).
@@ -154,5 +175,5 @@ func (p *Provider) FastSpeed(request FastRequest) {
 				Msg("GPT FastSpeed request completed but failed validation, continuing")
 		}
 	}
-	p.Notify(consts.EventSyncCreate, ret)
+	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
 }

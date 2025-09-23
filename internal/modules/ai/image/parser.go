@@ -323,3 +323,11 @@ func DetectError(supplier, model, body string) error {
 	}
 	return nil
 }
+
+type GenericSysExitResponse struct {
+	TaskID int
+}
+
+func (g *GenericSysExitResponse) GetTaskID() int {
+	return g.TaskID
+}

@@ -7,6 +7,7 @@ import (
 )
 
 var ImageTaskQueue = NewTaskQueue(100)
+var closeOnce sync.Once
 
 func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
@@ -23,8 +24,10 @@ func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
 				return
 			}
 		case <-ctx.Done():
-			close(ImageTaskQueue)
-			logs.Logger.Info().Msg("Image task queue closed")
+			closeOnce.Do(func() {
+				close(ImageTaskQueue)
+				logs.Logger.Info().Msg("Image task queue closed")
+			})
 		}
 	}
 }

@@ -67,8 +67,6 @@ func (t TaskType) String() string {
 }
 
 const (
-	EventAsyncCreate = iota
-	EventAsyncQuery
-	EventSyncCreate
+	EventSyncCreate = iota
 	EventSysExit
 )
