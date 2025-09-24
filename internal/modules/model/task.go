@@ -98,10 +98,10 @@ func (SupplierInvokeHistory) TableName() string {
 }
 
 type TaskImage struct {
-	TaskId      int            `json:"task_id" gorm:"column:task_id;type:int;primaryKey"`
-	ImageId     int            `json:"image_id" gorm:"column:image_id;type:int;primaryKey"`
-	Type        string         `json:"type" gorm:"column:type;type:enum('input', 'output');primaryKey"` // 类型
-	Origin      sql.NullString `json:"origin" gorm:"column:origin;type:enum('input', 'output')"`        // 来源
+	TaskId      int            `json:"task_id" gorm:"column:task_id;type:int"`
+	ImageId     int            `json:"image_id" gorm:"column:image_id;type:int"`
+	Type        string         `json:"type" gorm:"column:type;type:enum('input', 'output')"`     // 类型
+	Origin      sql.NullString `json:"origin" gorm:"column:origin;type:enum('input', 'output')"` // 来源
 	InputImage  InputImage     `json:"input_image" gorm:"foreignKey:ImageId;references:Id"`
 	OutputImage OutputImage    `json:"output_image" gorm:"foreignKey:ImageId;references:Id"`
 }
