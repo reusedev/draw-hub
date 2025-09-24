@@ -27,7 +27,7 @@ type Response interface {
 
 	Succeed() bool
 	GetURLs() []string
-	GetError() error
+	GetError() error // is nil if Succeed() return true
 
 	SetBasicResponse(statusCode int, respBody string, respAt time.Time)
 	SetURLs(urls []string)
@@ -172,7 +172,9 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 		}
 		// Read body with timeout, because sometime it will block about 900s.
 		response.SetBasicResponse(resp.StatusCode, string(respBody), time.Now())
-		response.SetError(StatusCodeError)
+		if detectedErr := DetectError(response, string(respBody)); detectedErr != nil {
+			response.SetError(detectedErr)
+		}
 		return nil
 	}
 	body, err := io.ReadAll(resp.Body)
@@ -197,7 +199,7 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 			Int64("duration", response.DurationMs()).
 			Str("body", string(body)).
 			Msg("image resp error")
-		if detectedErr := DetectError(response.GetSupplier(), response.GetModel(), string(body), response.GetURLs()); detectedErr != nil {
+		if detectedErr := DetectError(response, string(body)); detectedErr != nil {
 			response.SetError(detectedErr)
 		}
 	}
@@ -257,7 +259,9 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 		}
 		// Read body with timeout, because sometime it will block about 900s.
 		response.SetBasicResponse(resp.StatusCode, string(respBody), time.Now())
-		response.SetError(StatusCodeError)
+		if detectedErr := DetectError(response, string(respBody)); detectedErr != nil {
+			response.SetError(detectedErr)
+		}
 		return nil
 	}
 	var content strings.Builder
@@ -335,7 +339,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 			Int64("duration", response.DurationMs()).
 			Str("body", bodyString).
 			Msg("stream image resp error")
-		if detectedErr := DetectError(response.GetSupplier(), response.GetModel(), bodyString, response.GetURLs()); detectedErr != nil {
+		if detectedErr := DetectError(response, bodyString); detectedErr != nil {
 			response.SetError(detectedErr)
 		}
 	}
@@ -368,15 +372,21 @@ var (
 	}
 )
 
-func DetectError(supplier, model, body string, urls []string) error {
-	if errs, ok := errorMap[supplier+model]; ok {
+func DetectError(response Response, body string) error {
+	if response.Succeed() {
+		return nil
+	}
+	if errs, ok := errorMap[response.GetSupplier()+response.GetModel()]; ok {
 		for key, err := range errs {
 			if strings.Contains(body, key) {
 				return err
 			}
 		}
 	}
-	if len(urls) == 0 {
+	if response.GetStatusCode() != http.StatusOK {
+		return StatusCodeError
+	}
+	if len(response.GetURLs()) == 0 {
 		return NoImageError
 	}
 	return nil

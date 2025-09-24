@@ -137,7 +137,6 @@ func (g *Image1Request) InitResponse(supplier string, duration time.Duration, to
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
 		Duration:  duration,
-		Base64:    []string{},
 		URLs:      []string{},
 	}
 	ret.Model = consts.GPTImage1.String()

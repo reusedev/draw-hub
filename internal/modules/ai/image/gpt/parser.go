@@ -100,7 +100,6 @@ type Image1Response struct {
 	RespBody   string        `json:"resp_body"`
 	RespAt     time.Time     `json:"resp_at"`
 	Duration   time.Duration `json:"duration"`
-	Base64     []string      `json:"base64"`
 	URLs       []string      `json:"URLs"`
 	Error      error         `json:"error,omitempty"`
 	TaskID     int           `json:"task_id"` // 添加TaskID字段
@@ -128,7 +127,7 @@ func (r *Image1Response) DurationMs() int64 {
 	return r.Duration.Milliseconds()
 }
 func (r *Image1Response) Succeed() bool {
-	return len(r.Base64) != 0 || len(r.URLs) != 0
+	return len(r.URLs) != 0
 }
 func (r *Image1Response) GetURLs() []string {
 	return r.URLs
