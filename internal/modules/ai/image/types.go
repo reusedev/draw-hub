@@ -8,6 +8,6 @@ import (
 
 type Request[T any] interface {
 	BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error)
-	Path() string
+	Path(supplier consts.ModelSupplier) string
 	InitResponse(supplier string, duration time.Duration, tokenDesc string) T
 }

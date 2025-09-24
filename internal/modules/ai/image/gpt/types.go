@@ -52,7 +52,7 @@ func (g *Image4oRequest) BodyContentType(supplier consts.ModelSupplier) (io.Read
 	}
 	return bytes.NewBuffer(data), "application/json", nil
 }
-func (g *Image4oRequest) Path() string {
+func (g *Image4oRequest) Path(supplier consts.ModelSupplier) string {
 	return "v1/chat/completions"
 }
 func (g *Image4oRequest) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
@@ -129,7 +129,7 @@ func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reade
 		return payload, writer.FormDataContentType(), nil
 	}
 }
-func (g *Image1Request) Path() string {
+func (g *Image1Request) Path(supplier consts.ModelSupplier) string {
 	return "v1/images/edits"
 }
 func (g *Image1Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {

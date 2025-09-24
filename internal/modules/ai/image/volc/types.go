@@ -41,7 +41,7 @@ func (j *JiMengV40Request) BodyContentType(supplier consts.ModelSupplier) (io.Re
 	return bytes.NewBuffer(data), "application/json", nil
 }
 
-func (j *JiMengV40Request) Path() string {
+func (j *JiMengV40Request) Path(supplier consts.ModelSupplier) string {
 	return "/v1/images/generations"
 }
 

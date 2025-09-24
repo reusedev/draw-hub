@@ -62,12 +62,17 @@ func (p *Provider) Create(request Request) {
 			Prompt:     request.Prompt,
 			Model:      order.Model,
 		}
-		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, NewFlashImageParser())
+		var parser image.Parser[image.Response]
+		parser = NewFlashImageParser()
+		if order.Model == "gemini-nano-banana-hd" && order.Supplier == consts.Geek.String() {
+			parser = image.NewGenericParser(&image.OpenAIImageStrategy{})
+		}
+		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, parser)
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", order.Supplier).
-				Str("model", order.Model).Msg("Gemini Create request failed")
+				Str("token_desc", order.Desc).Str("model", order.Model).Msg("Gemini Create request failed")
 			continue
 		}
 		ret = append(ret, response)

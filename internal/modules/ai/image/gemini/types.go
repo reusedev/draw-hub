@@ -17,6 +17,17 @@ type FlashImageRequest struct {
 }
 
 func (f *FlashImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
+	if supplier == consts.Geek && f.Model == "gemini-nano-banana-hd" {
+		body := make(map[string]any)
+		body["model"] = f.Model
+		body["prompt"] = f.Prompt
+		body["image"] = f.ImageBytes
+		data, err := json.Marshal(body)
+		if err != nil {
+			return nil, "", err
+		}
+		return bytes.NewBuffer(data), "application/json", nil
+	}
 	body := make(map[string]any)
 	body["model"] = f.Model
 	body["stream"] = true
@@ -46,7 +57,10 @@ func (f *FlashImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.R
 	}
 	return bytes.NewBuffer(data), "application/json", nil
 }
-func (f *FlashImageRequest) Path() string {
+func (f *FlashImageRequest) Path(supplier consts.ModelSupplier) string {
+	if supplier == consts.Geek && f.Model == "gemini-nano-banana-hd" {
+		return "v1/images/edits"
+	}
 	return "v1/chat/completions"
 }
 func (f *FlashImageRequest) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {

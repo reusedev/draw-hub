@@ -38,7 +38,7 @@ func (r *SyncRequester) Do() (Response, error) {
 	}
 	req, err := client.NewRequest(
 		http.MethodPost,
-		tools.FullURL(r.token.GetSupplier().BaseURL(), r.RequestType.Path()),
+		tools.FullURL(r.token.GetSupplier().BaseURL(), r.RequestType.Path(r.token.Supplier)),
 		http_client.WithHeader("Authorization", "Bearer "+r.token.Token),
 		http_client.WithHeader("Content-Type", contentType),
 		http_client.WithBody(body),
@@ -57,7 +57,7 @@ func (r *SyncRequester) Do() (Response, error) {
 		Int("task_id", r.TaskID).
 		Str("supplier", r.token.Supplier.String()).
 		Str("token_desc", r.token.Desc).
-		Str("path", r.RequestType.Path()).
+		Str("path", r.RequestType.Path(r.token.Supplier)).
 		Str("method", req.Method).
 		Int("status_code", resp.StatusCode).
 		Dur("duration", duration).
