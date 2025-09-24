@@ -268,7 +268,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 	var totalChunks int
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // Increase buffer size for large chunks
+	scanner.Buffer(make([]byte, 0, 64*1024), 50*1024*1024) // Increase buffer size for large chunks
 
 	for scanner.Scan() {
 		line := scanner.Text()
