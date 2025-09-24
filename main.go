@@ -32,7 +32,7 @@ func main() {
 	flag.Parse()
 	config.Init(tools.PanicOnError(tools.ReadFile(configPath)))
 	logs.InitLogger()
-	//syscall.Umask(0007)
+	syscall.Umask(0007)
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := &sync.WaitGroup{}
 	queue.InitImageTaskQueue(ctx, wg)
