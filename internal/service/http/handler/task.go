@@ -470,9 +470,6 @@ func (h *TaskHandler) recordSupplierInvoke() error {
 			CreatedAt:    v.GetRespAt(),
 		}
 		respBody := v.GetRespBody()
-		if v.GetStatusCode() != http.StatusOK {
-			exeRecord.FailedRespBody = respBody
-		}
 		if v.GetError() != nil {
 			if len(respBody) < 10000 {
 				exeRecord.FailedRespBody = respBody
