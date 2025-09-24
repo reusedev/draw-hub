@@ -2,6 +2,7 @@ package image
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -148,6 +149,32 @@ func NewGenericParser(strategy ParseStrategy) *GenericParser {
 }
 
 func (g *GenericParser) Parse(resp *http.Response, response Response) error {
+	if resp.StatusCode != http.StatusOK {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*90)
+		defer cancel()
+		type result struct {
+			data []byte
+			err  error
+		}
+		resultCh := make(chan result, 1)
+		go func() {
+			data, err := io.ReadAll(resp.Body)
+			resultCh <- result{data: data, err: err}
+		}()
+		var respBody []byte
+		select {
+		case res := <-resultCh:
+			if res.err != nil {
+				return res.err
+			}
+			respBody = res.data
+		case <-ctx.Done():
+		}
+		// Read body with timeout, because sometime it will block about 900s.
+		response.SetBasicResponse(resp.StatusCode, string(respBody), time.Now())
+		response.SetError(StatusCodeError)
+		return nil
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -206,13 +233,33 @@ func (s *StreamParser) extractContent(chunk []byte) []byte {
 }
 
 func (s *StreamParser) Parse(resp *http.Response, response Response) error {
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		response.SetBasicResponse(resp.StatusCode, string(body), time.Now())
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*90)
+		defer cancel()
+		type result struct {
+			data []byte
+			err  error
+		}
+		resultCh := make(chan result, 1)
+		go func() {
+			data, err := io.ReadAll(resp.Body)
+			resultCh <- result{data: data, err: err}
+		}()
+		var respBody []byte
+		select {
+		case res := <-resultCh:
+			if res.err != nil {
+				return res.err
+			}
+			respBody = res.data
+		case <-ctx.Done():
+		}
+		// Read body with timeout, because sometime it will block about 900s.
+		response.SetBasicResponse(resp.StatusCode, string(respBody), time.Now())
 		response.SetError(StatusCodeError)
 		return nil
 	}
-	defer resp.Body.Close()
 	var content strings.Builder
 	var totalChunks int
 
