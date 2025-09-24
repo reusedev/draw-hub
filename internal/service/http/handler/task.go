@@ -110,6 +110,7 @@ func (h *TaskHandler) edit(ctx context.Context) {
 		h.fail(err)
 		return
 	}
+	urls, _ := h.inputImageURLs()
 	logs.Logger.Info().
 		Int("task_id", h.task.Id).
 		Str("model", h.task.Model).
@@ -141,6 +142,7 @@ func (h *TaskHandler) edit(ctx context.Context) {
 		gemini.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else if strings.HasPrefix(h.task.Model, "jimeng") {
 		req := volc.Request{
+			ImageURLs:  urls,
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			Size:       h.task.Size,
@@ -216,6 +218,31 @@ func (h *TaskHandler) inputImageBytes() (ret [][]byte, err error) {
 		ret = append(ret, b)
 	}
 	return
+}
+
+func (h *TaskHandler) inputImageURLs() ([]string, error) {
+	ret := make([]string, 0)
+	for _, img := range h.task.TaskImages {
+		if img.Type != model.TaskImageTypeInput.String() {
+			continue
+		}
+		var key string
+		if img.Origin.String == model.TaskImageOriginOutput.String() {
+			key = img.OutputImage.Key
+		} else {
+			key = img.InputImage.Key
+		}
+		if !config.GConfig.CloudStorageEnabled {
+			return nil, fmt.Errorf("cloud storage is not enabled, cannot get input image bytes")
+		}
+		url, err := ali.OssClient.URL(key, time.Hour)
+		if err != nil {
+			logs.Logger.Err(err).Msg("Get-OSS-URL")
+			return nil, err
+		}
+		ret = append(ret, url)
+	}
+	return ret, nil
 }
 
 func (h *TaskHandler) createEditTask(form request.TaskForm) error {

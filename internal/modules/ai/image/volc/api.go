@@ -30,6 +30,7 @@ func (p *Provider) Notify(event int, data interface{}) {
 }
 
 type Request struct {
+	ImageURLs  []string `json:"image_urls"`
 	ImageBytes [][]byte `json:"image_bytes"`
 	Prompt     string   `json:"prompt"`
 	Size       string   `json:"size"`
@@ -58,6 +59,7 @@ func (p *Provider) Create(request Request) {
 		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
 			Str("token_desc", order.Desc).Str("model", order.Model).Msg("Attempting JiMeng Create request")
 		content := JiMengV40Request{
+			ImageURLs:  request.ImageURLs,
 			ImageBytes: request.ImageBytes,
 			Prompt:     request.Prompt,
 			Model:      order.Model,

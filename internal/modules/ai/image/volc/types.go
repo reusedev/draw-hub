@@ -12,6 +12,7 @@ import (
 // JiMengV40Request Reference: https://tuzi-api.apifox.cn/349741169e0
 type JiMengV40Request struct {
 	Model      string
+	ImageURLs  []string
 	ImageBytes [][]byte
 	Prompt     string
 	Size       string
@@ -20,8 +21,14 @@ type JiMengV40Request struct {
 func (j *JiMengV40Request) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
 	body := make(map[string]any)
 	body["model"] = j.Model
-	if len(j.ImageBytes) != 0 {
-		body["image"] = j.ImageBytes
+	if supplier == consts.Tuzi {
+		if len(j.ImageBytes) != 0 {
+			body["image"] = j.ImageBytes
+		}
+	} else if supplier == consts.Geek {
+		if len(j.ImageURLs) != 0 {
+			body["image"] = j.ImageURLs
+		}
 	}
 	body["prompt"] = j.Prompt
 	if j.Size != "" {
