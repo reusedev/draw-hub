@@ -545,9 +545,11 @@ func (h *TaskHandler) endWork() error {
 			}
 			taskRecord := model.Task{
 				Id:       h.task.Id,
-				Model:    v.GetModel(),
 				Status:   model.TaskStatusSucceed.String(),
 				Progress: 100,
+			}
+			if h.task.Model == "" {
+				taskRecord.Model = v.GetModel()
 			}
 			err = mysql.DB.Updates(&taskRecord).Error
 			if err != nil {
