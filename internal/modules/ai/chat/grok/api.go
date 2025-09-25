@@ -15,7 +15,7 @@ func DeepSearch(request chat.CommonRequest) []chat.Response {
 	go func() {
 		consumeSignal <- struct{}{}
 	}()
-	for tokenWithModel := range ai.GTokenManager[request.Model].GetToken(ctx, consumeSignal) {
+	for tokenWithModel := range ai.GTokenManager["deepsearch"].GetToken(ctx, consumeSignal) {
 		requester := chat.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &request, &chat.CommonParser{})
 		response, err := requester.Do()
 		go func() {

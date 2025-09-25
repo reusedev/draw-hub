@@ -140,7 +140,7 @@ func (p *Provider) FastSpeed(request FastRequest) {
 	go func() {
 		consumeSignal <- struct{}{}
 	}()
-	for tokenWithModel := range ai.GTokenManager["slow_speed"].GetToken(ctx, consumeSignal) {
+	for tokenWithModel := range ai.GTokenManager["fast_speed"].GetToken(ctx, consumeSignal) {
 		attemptCount++
 		logs.Logger.Info().
 			Int("task_id", request.TaskID).

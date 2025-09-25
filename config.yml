@@ -136,7 +136,7 @@ request_order:
         supplier: "tuzi"
         desc: "default"
         model: "grok-3-deepsearch"
-  gemini_25_flash:
+  gemini-2.5-flash-image:
     -
       -
         supplier: "tuzi"
@@ -147,7 +147,7 @@ request_order:
         supplier: "geek"
         desc: "low_price"
         model: "gemini-2.5-flash-image"
-  gemini_25_flash_hd:
+  gemini-2.5-flash-image-hd:
     -
       -
         supplier: "tuzi"
@@ -162,7 +162,7 @@ request_order:
         supplier: "geek"
         desc: "low_price"
         model: "gemini-2.5-flash-image-hd"
-  jimeng_v40:
+  jimeng_t2i_v40:
     -
       -
         supplier: "tuzi"

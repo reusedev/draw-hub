@@ -114,9 +114,9 @@ type RequestOrder struct {
 	SlowSpeed       [][]Request `yaml:"slow_speed"`
 	FastSpeed       [][]Request `yaml:"fast_speed"`
 	DeepSearch      [][]Request `yaml:"deepsearch"`
-	Gemini25Flash   [][]Request `yaml:"gemini_25_flash"`
-	Gemini25FlashHD [][]Request `yaml:"gemini_25_flash_hd"`
-	JiMengV40       [][]Request `yaml:"jimeng_v40"`
+	Gemini25Flash   [][]Request `yaml:"gemini-2.5-flash-image"`
+	Gemini25FlashHD [][]Request `yaml:"gemini-2.5-flash-image-hd"`
+	JiMengV40       [][]Request `yaml:"jimeng_t2i_v40"`
 }
 
 type Request struct {
