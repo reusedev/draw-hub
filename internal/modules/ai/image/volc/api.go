@@ -2,7 +2,6 @@ package volc
 
 import (
 	"context"
-	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
@@ -55,34 +54,43 @@ func (p *Provider) Create(request Request) {
 		}
 	}()
 	ret := make([]image.Response, 0)
-	for _, order := range config.GConfig.RequestOrder.JiMengV40 {
-		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
-			Str("token_desc", order.Desc).Str("model", order.Model).Msg("Attempting JiMeng Create request")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	consumeSignal := make(chan struct{})
+	go func() {
+		consumeSignal <- struct{}{}
+	}()
+	for tokenWithModel := range ai.GTokenManager[consts.JiMengV40.String()].GetToken(ctx, consumeSignal) {
+		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
+			Str("token_desc", tokenWithModel.Desc).Str("model", tokenWithModel.Model).Msg("Attempting JiMeng Create request")
 		content := JiMengV40Request{
 			ImageURLs:  request.ImageURLs,
 			ImageBytes: request.ImageBytes,
 			Prompt:     request.Prompt,
-			Model:      order.Model,
+			Model:      tokenWithModel.Model,
 			Size:       request.Size,
 		}
-		requester := image.NewRequester(ai.Token{Token: order.Token, Desc: order.Desc, Supplier: consts.ModelSupplier(order.Supplier)}, &content, NewJiMengParser())
+		requester := image.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &content, NewJiMengParser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
+		go func() {
+			consumeSignal <- struct{}{}
+		}()
 		if err != nil {
-			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", order.Supplier).
-				Str("model", order.Model).Msg("JiMeng Create request failed")
+			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
+				Str("model", tokenWithModel.Model).Msg("JiMeng Create request failed")
 			continue
 		}
 		ret = append(ret, response)
 		if response.Succeed() {
 			urls := response.GetURLs()
-			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
-				Str("model", order.Model).Strs("image_urls", urls).
+			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
+				Str("model", tokenWithModel.Model).Strs("image_urls", urls).
 				Msg("JiMeng Create request succeeded, stopping iteration")
 			break
 		} else {
-			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", order.Supplier).
-				Str("model", order.Model).Msg("JiMeng Create request completed but failed validation, continuing")
+			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
+				Str("model", tokenWithModel.Model).Msg("JiMeng Create request completed but failed validation, continuing")
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })

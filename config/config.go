@@ -1,8 +1,11 @@
 package config
 
 import (
+	"context"
 	"fmt"
+	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
@@ -42,6 +45,7 @@ type Config struct {
 	URLExpires            string `yaml:"url_expires"`
 	AliOss                `yaml:"ali_oss"`
 	MySQL                 `yaml:"mysql"`
+	Token                 []Token `yaml:"token"`
 	RequestOrder          `yaml:"request_order"`
 }
 
@@ -100,6 +104,12 @@ type MySQL struct {
 	MaxOpenConns int    `yaml:"max_open_conns"`
 }
 
+type Token struct {
+	Supplier string `json:"supplier"`
+	Token    string `json:"token"`
+	Desc     string `json:"desc"`
+}
+
 type RequestOrder struct {
 	SlowSpeed       [][]Request `yaml:"slow_speed"`
 	FastSpeed       [][]Request `yaml:"fast_speed"`
@@ -111,11 +121,72 @@ type RequestOrder struct {
 
 type Request struct {
 	Supplier string `json:"supplier"`
-	Token    string `json:"token"`
 	Desc     string `json:"desc"`
 	Model    string `json:"model"`
 }
 
-func GetRequestOrder(model consts.Model) []Request {
-	return nil
+func getToken(supplier, desc string) string {
+	for _, token := range GConfig.Token {
+		if token.Supplier == supplier && token.Desc == desc {
+			return token.Token
+		}
+	}
+	return ""
+}
+
+func (r *RequestOrder) Classifications() []string {
+	var result []string
+	ts := reflect.TypeOf(r).Elem()
+	for i := 0; i < ts.NumField(); i++ {
+		field := ts.Field(i)
+		classification, ok := field.Tag.Lookup("yaml")
+		if !ok {
+			continue
+		}
+		result = append(result, classification)
+	}
+	return result
+}
+
+func (r *RequestOrder) Tokens() [][][]ai.TokenWithModel {
+	var result [][][]ai.TokenWithModel
+	rv := reflect.ValueOf(r).Elem()
+	rt := rv.Type()
+	for i := 0; i < rt.NumField(); i++ {
+		field := rt.Field(i)
+		if _, ok := field.Tag.Lookup("yaml"); !ok {
+			continue
+		}
+		fieldValue := rv.Field(i)
+		if fieldValue.Type() != reflect.TypeOf([][]Request{}) {
+			continue
+		}
+		var classificationTokens [][]ai.TokenWithModel
+		for j := 0; j < fieldValue.Len(); j++ {
+			tokenGroup := fieldValue.Index(j)
+			var tokens []ai.TokenWithModel
+			for k := 0; k < tokenGroup.Len(); k++ {
+				request := tokenGroup.Index(k).Interface().(Request)
+				token := ai.TokenWithModel{
+					Token: ai.Token{
+						Supplier: consts.ModelSupplier(request.Supplier),
+						Token:    getToken(request.Supplier, request.Desc),
+						Desc:     request.Desc,
+					},
+					Model: request.Model,
+				}
+				tokens = append(tokens, token)
+			}
+			classificationTokens = append(classificationTokens, tokens)
+		}
+		result = append(result, classificationTokens)
+	}
+	return result
+}
+
+func InitTokenManager(ctx context.Context) {
+	err := ai.InitTokenManager(ctx, GConfig.RequestOrder.Classifications(), GConfig.RequestOrder.Tokens())
+	if err != nil {
+		panic(err)
+	}
 }

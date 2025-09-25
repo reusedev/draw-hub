@@ -34,6 +34,9 @@ func TestGetToken(t *testing.T) {
 	}
 	tokens := make([]TokenWithModel, 0)
 	signal := make(chan struct{})
+	go func() {
+		signal <- struct{}{}
+	}()
 	for token := range m.GetToken(context.Background(), signal) {
 		tokens = append(tokens, token)
 		go func() {
@@ -99,6 +102,9 @@ func TestBanToken(t *testing.T) {
 
 	tokens := make([]TokenWithModel, 0)
 	signal := make(chan struct{})
+	go func() {
+		signal <- struct{}{}
+	}()
 	for token := range m.GetToken(context.Background(), signal) {
 		tokens = append(tokens, token)
 		go func() {

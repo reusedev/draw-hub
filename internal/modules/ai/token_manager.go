@@ -44,15 +44,15 @@ type TokenManager struct {
 }
 
 // GTokenManager [classification(slow|fast|gemini-2.5-flash-image-hd)]TokenManager
-var GTokenManager map[string]TokenManager
+var GTokenManager map[string]*TokenManager
 
 func InitTokenManager(ctx context.Context, cla []string, tokens [][][]TokenWithModel) error {
 	if len(cla) != len(tokens) {
 		return fmt.Errorf("init token manager error")
 	}
-	GTokenManager = make(map[string]TokenManager)
+	GTokenManager = make(map[string]*TokenManager)
 	for i := 0; i < len(cla)-1; i++ {
-		GTokenManager[cla[i]] = TokenManager{
+		GTokenManager[cla[i]] = &TokenManager{
 			Token: tokens[i],
 			Lock:  &sync.Mutex{},
 		}
@@ -95,14 +95,13 @@ func (t *TokenManager) GetToken(ctx context.Context, consumeSignal chan struct{}
 			case <-ctx.Done():
 				close(tokenCh)
 				return
-			default:
+			case <-consumeSignal:
 				token := t.getToken(clientId)
 				if token == nil {
 					close(tokenCh)
 					return
 				}
 				tokenCh <- *token
-				<-consumeSignal
 			}
 		}
 	}()

@@ -29,11 +29,12 @@ func init() {
 }
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
 	flag.Parse()
 	config.Init(tools.PanicOnError(tools.ReadFile(configPath)))
+	config.InitTokenManager(ctx)
 	logs.InitLogger()
-	syscall.Umask(0007)
-	ctx, cancel := context.WithCancel(context.Background())
+	//syscall.Umask(0007)
 	wg := &sync.WaitGroup{}
 	queue.InitImageTaskQueue(ctx, wg)
 	mysql.CreateDataBase(config.GConfig.MySQL)
