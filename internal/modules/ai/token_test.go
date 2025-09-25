@@ -70,3 +70,48 @@ func TestTidy(t *testing.T) {
 	require.Equal(t, []consts.ModelSupplier{consts.Geek}, m.BanSupplier)
 	require.Equal(t, []time.Time{fiveMinLater}, m.ExpiredAt)
 }
+
+func TestBanToken(t *testing.T) {
+	m := TokenManager{
+		Token: [][]TokenWithModel{
+			{
+				{
+					Token{Token: "sk-1", Supplier: consts.Tuzi},
+					"gpt-4o-image",
+				},
+				{
+					Token{Token: "sk-2", Supplier: consts.Tuzi},
+					"gpt-4o-image",
+				},
+			},
+			{
+				{
+					Token{Token: "sk-3", Supplier: consts.Geek},
+					"gpt-4o-image-vip",
+				},
+			},
+		},
+		Lock:   &sync.Mutex{},
+		Client: make([]*Client, 0),
+	}
+	//m.Ban(consts.Tuzi, time.Now().Add(time.Hour))
+	m.Ban(consts.Geek, time.Now().Add(time.Hour))
+
+	tokens := make([]TokenWithModel, 0)
+	signal := make(chan struct{})
+	for token := range m.GetToken(context.Background(), signal) {
+		tokens = append(tokens, token)
+		go func() {
+			signal <- struct{}{}
+		}()
+	}
+	require.Equal(t, []TokenWithModel{
+		{
+			Token{Token: "sk-1", Supplier: consts.Tuzi},
+			"gpt-4o-image",
+		},
+		{
+			Token{Token: "sk-2", Supplier: consts.Tuzi},
+			"gpt-4o-image",
+		}}, tokens)
+}

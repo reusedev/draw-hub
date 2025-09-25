@@ -58,7 +58,7 @@ func InitTokenManager(ctx context.Context, cla []string, tokens [][][]TokenWithM
 		}
 	}
 	go func() {
-		t := time.NewTicker(5 * time.Second)
+		t := time.NewTicker(1 * time.Second)
 		for {
 			select {
 			case <-t.C:
@@ -71,6 +71,42 @@ func InitTokenManager(ctx context.Context, cla []string, tokens [][][]TokenWithM
 		}
 	}()
 	return nil
+}
+
+func (t *TokenManager) Ban(supplier consts.ModelSupplier, expiredAt time.Time) {
+	t.Lock.Lock()
+	defer t.Lock.Unlock()
+
+	for _, v := range t.BanSupplier {
+		if v == supplier {
+			return
+		}
+	}
+	t.BanSupplier = append(t.BanSupplier, supplier)
+	t.ExpiredAt = append(t.ExpiredAt, expiredAt)
+}
+
+func (t *TokenManager) GetToken(ctx context.Context, consumeSignal chan struct{}) chan TokenWithModel {
+	tokenCh := make(chan TokenWithModel)
+	clientId := uuid.NewString()
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				close(tokenCh)
+				return
+			default:
+				token := t.getToken(clientId)
+				if token == nil {
+					close(tokenCh)
+					return
+				}
+				tokenCh <- *token
+				<-consumeSignal
+			}
+		}
+	}()
+	return tokenCh
 }
 
 func (t *TokenManager) getToken(clientId string) *TokenWithModel {
@@ -130,29 +166,6 @@ func (t *TokenManager) getValidToken(client *Client) *TokenWithModel {
 		}
 	}
 	return nil
-}
-
-func (t *TokenManager) GetToken(ctx context.Context, consumeSignal chan struct{}) chan TokenWithModel {
-	tokenCh := make(chan TokenWithModel)
-	clientId := uuid.NewString()
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				close(tokenCh)
-				return
-			default:
-				token := t.getToken(clientId)
-				if token == nil {
-					close(tokenCh)
-					return
-				}
-				tokenCh <- *token
-				<-consumeSignal
-			}
-		}
-	}()
-	return tokenCh
 }
 
 func (t *TokenManager) validToken(token TokenWithModel) bool {
