@@ -2,13 +2,16 @@ package gpt
 
 import (
 	"context"
+	"errors"
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
+	"net/http"
 	"sync"
+	"time"
 )
 
 type Provider struct {
@@ -83,12 +86,12 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 		requester := image.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &content, NewImage4oParser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
-		go func() {
-			consumeSignal <- struct{}{}
-		}()
 		if err != nil {
 			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
 				Str("model", tokenWithModel.Model).Msg("GPT SlowSpeed request failed")
+			go func() {
+				consumeSignal <- struct{}{}
+			}()
 			continue
 		}
 		ret = append(ret, response)
@@ -100,6 +103,17 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 		} else {
 			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
 				Str("model", tokenWithModel.Model).Msg("GPT SlowSpeed request completed but failed validation, continuing")
+			if response.GetError() != nil {
+				if errors.Is(response.GetError(), image.PromptError) {
+					break
+				}
+			}
+			if response.GetStatusCode() == http.StatusBadGateway {
+				ai.GTokenManager["slow_speed"].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
+			}
+			go func() {
+				consumeSignal <- struct{}{}
+			}()
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
@@ -161,9 +175,6 @@ func (p *Provider) FastSpeed(request FastRequest) {
 		requester := image.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &content, NewImage1Parser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
-		go func() {
-			consumeSignal <- struct{}{}
-		}()
 		if err != nil {
 			logs.Logger.Error().
 				Err(err).
@@ -172,6 +183,9 @@ func (p *Provider) FastSpeed(request FastRequest) {
 				Str("supplier", tokenWithModel.Supplier.String()).
 				Str("model", tokenWithModel.Model).
 				Msg("GPT FastSpeed request failed")
+			go func() {
+				consumeSignal <- struct{}{}
+			}()
 			continue
 		}
 		ret = append(ret, response)
@@ -191,6 +205,17 @@ func (p *Provider) FastSpeed(request FastRequest) {
 				Str("supplier", tokenWithModel.Supplier.String()).
 				Str("model", tokenWithModel.Model).
 				Msg("GPT FastSpeed request completed but failed validation, continuing")
+			if response.GetError() != nil {
+				if errors.Is(response.GetError(), image.PromptError) {
+					break
+				}
+			}
+			if response.GetStatusCode() == http.StatusBadGateway {
+				ai.GTokenManager["fast_speed"].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
+			}
+			go func() {
+				consumeSignal <- struct{}{}
+			}()
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })

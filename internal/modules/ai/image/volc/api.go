@@ -2,12 +2,15 @@ package volc
 
 import (
 	"context"
+	"errors"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
+	"net/http"
 	"sync"
+	"time"
 )
 
 type Provider struct {
@@ -73,12 +76,12 @@ func (p *Provider) Create(request Request) {
 		requester := image.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &content, NewJiMengParser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
-		go func() {
-			consumeSignal <- struct{}{}
-		}()
 		if err != nil {
 			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
 				Str("model", tokenWithModel.Model).Msg("JiMeng Create request failed")
+			go func() {
+				consumeSignal <- struct{}{}
+			}()
 			continue
 		}
 		ret = append(ret, response)
@@ -91,6 +94,17 @@ func (p *Provider) Create(request Request) {
 		} else {
 			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
 				Str("model", tokenWithModel.Model).Msg("JiMeng Create request completed but failed validation, continuing")
+			if response.GetError() != nil {
+				if errors.Is(response.GetError(), image.PromptError) {
+					break
+				}
+			}
+			if response.GetStatusCode() == http.StatusBadGateway {
+				ai.GTokenManager[consts.JiMengV40.String()].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
+			}
+			go func() {
+				consumeSignal <- struct{}{}
+			}()
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
