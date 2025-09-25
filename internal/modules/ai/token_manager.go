@@ -132,7 +132,7 @@ func (t *TokenManager) getValidToken(client *Client) *TokenWithModel {
 	return nil
 }
 
-func (t *TokenManager) GetToken(ctx context.Context) chan TokenWithModel {
+func (t *TokenManager) GetToken(ctx context.Context, consumeSignal chan struct{}) chan TokenWithModel {
 	tokenCh := make(chan TokenWithModel)
 	clientId := uuid.NewString()
 	go func() {
@@ -148,6 +148,7 @@ func (t *TokenManager) GetToken(ctx context.Context) chan TokenWithModel {
 					return
 				}
 				tokenCh <- *token
+				<-consumeSignal
 			}
 		}
 	}()

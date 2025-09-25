@@ -33,8 +33,12 @@ func TestGetToken(t *testing.T) {
 		Client: make([]*Client, 0),
 	}
 	tokens := make([]TokenWithModel, 0)
-	for token := range m.GetToken(context.Background()) {
+	signal := make(chan struct{})
+	for token := range m.GetToken(context.Background(), signal) {
 		tokens = append(tokens, token)
+		go func() {
+			signal <- struct{}{}
+		}()
 	}
 	require.Equal(t, []TokenWithModel{
 		{
