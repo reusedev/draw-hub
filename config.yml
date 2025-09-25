@@ -39,106 +39,141 @@ mysql:
 # V3_API https://api.v3.cm/register?aff=ROjp
 # 兔子API https://api.tu-zi.com/register?aff=ROfC
 
+token:
+  -
+    supplier: "tuzi"
+    token: ""
+    desc: "default"
+  -
+    supplier: "tuzi"
+    token: ""
+    desc: "openai_channel"
+  -
+    supplier: "tuzi"
+    token: ""
+    desc: "multichannel"
+  -
+    supplier: "geek"
+    token: ""
+    desc: "low_price"
+  -
+    supplier: "geek"
+    token: ""
+    desc: "balance"
+  -
+    supplier: "geek"
+    token: ""
+    desc: "high_available"
+  -
+    supplier: "v3"
+    token: ""
+    desc: "default"
+
 # 请求顺序
-# 1. 先请求极客智坊的低价接口
-# 2. 如果极客智坊的低价接口失败，再访问均衡接口
-# ...
 request_order:
   # 低速接口请求顺序(调用gpt-4o-image、gpt-4o-image-vip)
   slow_speed:
     -
-      supplier: "tuzi"
-      token: "sk-"
-      desc: "default"
-      model: "gpt-4o-image"
+      -
+        supplier: "tuzi"
+        desc: "default"
+        model: "gpt-4o-image"
     -
-      supplier: "geek"
-      token: "sk-"
-      desc: "low_price"
-      model: "gpt-4o-image"
+      -
+        supplier: "geek"
+        desc: "low_price"
+        model: "gpt-4o-image"
     -
-      supplier: "tuzi"
-      token: "sk-"
-      desc: "default"
-      model: "gpt-4o-image-vip"
+      -
+        supplier: "tuzi"
+        desc: "default"
+        model: "gpt-4o-image-vip"
     -
-      supplier: "v3"
-      token: "sk-"
-      desc: "default"
-      model: "gpt-4o-image"
+      -
+        supplier: "v3"
+        desc: "default"
+        model: "gpt-4o-image"
     -
-      supplier: "v3"
-      token: "sk-"
-      desc: "default"
-      model: "gpt-4o-image-vip"
+      -
+        supplier: "v3"
+        desc: "default"
+        model: "gpt-4o-image-vip"
   # 高速接口请求顺序(gpt-image-1)
   fast_speed:
     -
-      supplier: "geek"
-      token: "sk-"
-      desc: "low_price"
-      model: "gpt-image-1"
+      -
+        supplier: "geek"
+        desc: "low_price"
+        model: "gpt-image-1"
     -
-      supplier: "geek"
-      token: "sk-"
-      desc: "balance"
-      model: "gpt-image-1"
+      -
+        supplier: "geek"
+        desc: "balance"
+        model: "gpt-image-1"
     -
-      supplier: "geek"
-      token: "sk-"
-      desc: "high_available"
-      model: "gpt-image-1"
+      -
+        supplier: "geek"
+        desc: "high_available"
+        model: "gpt-image-1"
     -
-      supplier: "v3"
-      token: "sk-"
-      desc: "default"
-      model: "gpt-image-1"
+      -
+        supplier: "v3"
+        desc: "default"
+        model: "gpt-image-1"
     -
-      supplier: "tuzi"
-      token: "sk-"
-      desc: "openai_channel"
-      model: "gpt-image-1"
+      -
+        supplier: "tuzi"
+        desc: "openai_channel"
+        model: "gpt-image-1"
   deepsearch:
     -
-      supplier: "geek"
-      token: "sk-"
-      desc: "low_price"
-      model: "grok-3-deepsearch"
+      -
+        supplier: "geek"
+        desc: "low_price"
+        model: "grok-3-deepsearch"
     -
-      supplier: "tuzi"
-      token: "sk-"
-      desc: "default"
-      model: "grok-3-deepsearch"
+      -
+        supplier: "tuzi"
+        desc: "default"
+        model: "grok-3-deepsearch"
   gemini_25_flash:
     -
-      supplier: "tuzi"
-      token: "sk-"
-      desc: "default"
-      model: "gemini-2.5-flash-image"
+      -
+        supplier: "tuzi"
+        desc: "default"
+        model: "gemini-2.5-flash-image"
     -
-      supplier: "geek"
-      token: "sk-"
-      desc: "low_price"
-      model: "gemini-2.5-flash-image"
+      -
+        supplier: "geek"
+        desc: "low_price"
+        model: "gemini-2.5-flash-image"
   gemini_25_flash_hd:
     -
-      supplier: "tuzi"
-      token: "sk-"
-      desc: "default"
-      model: "gemini-2.5-flash-image-hd"
+      -
+        supplier: "tuzi"
+        desc: "default"
+        model: "gemini-2.5-flash-image-hd"
+      -
+        supplier: "tuzi"
+        desc: "multichannel"
+        model: "doubao-seedream-4-0-250828"
     -
-      supplier: "geek"
-      token: "sk-"
-      desc: "low_price"
-      model: "gemini-2.5-flash-image-hd"
+      -
+        supplier: "geek"
+        desc: "low_price"
+        model: "gemini-2.5-flash-image-hd"
   jimeng_v40:
     -
-      supplier: "tuzi"
-      token: "sk-"
-      desc: "default"
-      model: "doubao-seedream-4-0-250828"
+      -
+        supplier: "tuzi"
+        desc: "default"
+        model: "doubao-seedream-4-0-250828"
+      -
+        supplier: "tuzi"
+        desc: "multichannel"
+        model: "doubao-seedream-4-0-250828"
     -
-      supplier: "geek"
-      token: "sk-"
-      desc: "low_price"
-      model: "doubao-seedream-4.0"
+      -
+        supplier: "geek"
+        desc: "low_price"
+        model: "doubao-seedream-4.0"

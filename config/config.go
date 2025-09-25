@@ -77,28 +77,6 @@ func (c *Config) Verify() error {
 	if err != nil {
 		return err
 	}
-	for _, o := range c.RequestOrder.SlowSpeed {
-		if o.Supplier != consts.Geek.String() && o.Supplier != consts.Tuzi.String() && o.Supplier != consts.V3.String() {
-			return fmt.Errorf("request_order.slow_speed.supplier must be geek, tuzi or v3")
-		}
-		if o.Model != consts.GPT4oImage.String() && o.Model != consts.GPT4oImageVip.String() {
-			return fmt.Errorf("request_order.slow_speed.model must be gpt-4o-image or gpt-4o-image-vip")
-		}
-		if o.Token == "" {
-			return fmt.Errorf("request_order.slow_speed.token must not be empty")
-		}
-	}
-	for _, o := range c.RequestOrder.FastSpeed {
-		if o.Supplier != consts.Geek.String() && o.Supplier != consts.Tuzi.String() && o.Supplier != consts.V3.String() {
-			return fmt.Errorf("request_order.slow_speed.supplier must be geek, tuzi or v3")
-		}
-		if o.Model != consts.GPTImage1.String() {
-			return fmt.Errorf("request_order.slow_speed.model must be gpt-image-1")
-		}
-		if o.Token == "" {
-			return fmt.Errorf("request_order.fast_speed.token must not be empty")
-		}
-	}
 	return nil
 }
 
@@ -123,12 +101,12 @@ type MySQL struct {
 }
 
 type RequestOrder struct {
-	SlowSpeed       []Request `yaml:"slow_speed"`
-	FastSpeed       []Request `yaml:"fast_speed"`
-	DeepSearch      []Request `yaml:"deepsearch"`
-	Gemini25Flash   []Request `yaml:"gemini_25_flash"`
-	Gemini25FlashHD []Request `yaml:"gemini_25_flash_hd"`
-	JiMengV40       []Request `yaml:"jimeng_v40"`
+	SlowSpeed       [][]Request `yaml:"slow_speed"`
+	FastSpeed       [][]Request `yaml:"fast_speed"`
+	DeepSearch      [][]Request `yaml:"deepsearch"`
+	Gemini25Flash   [][]Request `yaml:"gemini_25_flash"`
+	Gemini25FlashHD [][]Request `yaml:"gemini_25_flash_hd"`
+	JiMengV40       [][]Request `yaml:"jimeng_v40"`
 }
 
 type Request struct {
@@ -139,14 +117,5 @@ type Request struct {
 }
 
 func GetRequestOrder(model consts.Model) []Request {
-	switch model {
-	case consts.Gemini25Flash:
-		return GConfig.RequestOrder.Gemini25Flash
-	case consts.Gemini25FlashHD:
-		return GConfig.RequestOrder.Gemini25FlashHD
-	case consts.JiMengV40:
-		return GConfig.RequestOrder.JiMengV40
-	default:
-		return nil
-	}
+	return nil
 }

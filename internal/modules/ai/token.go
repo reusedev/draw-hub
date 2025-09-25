@@ -1,6 +1,8 @@
 package ai
 
-import "github.com/reusedev/draw-hub/internal/consts"
+import (
+	"github.com/reusedev/draw-hub/internal/consts"
+)
 
 type Token struct {
 	Token    string
