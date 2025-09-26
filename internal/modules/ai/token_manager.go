@@ -51,7 +51,7 @@ func InitTokenManager(ctx context.Context, cla []string, tokens [][][]TokenWithM
 		return fmt.Errorf("init token manager error")
 	}
 	GTokenManager = make(map[string]*TokenManager)
-	for i := 0; i < len(cla)-1; i++ {
+	for i := 0; i < len(cla); i++ {
 		GTokenManager[cla[i]] = &TokenManager{
 			Token: tokens[i],
 			Lock:  &sync.Mutex{},

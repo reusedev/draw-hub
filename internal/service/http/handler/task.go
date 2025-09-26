@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image/gemini"
@@ -383,16 +384,32 @@ func (h *TaskHandler) createImageRecords(imageResp image.Response) error {
 	return nil
 }
 func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
+	type imageData struct {
+		URL  string `json:"url"`
+		Byte []byte `json:"byte"`
+	}
+	result := make([]imageData, 0)
 	for _, v := range imageResp.GetURLs() {
-		imageBytes, _, err := tools.GetOnlineImage(v)
+		b, _, err := tools.GetOnlineImage(v)
 		if err != nil {
 			return err
 		}
-		path, err := saveNormalImage(imageBytes, h.task.CreatedAt, imageResp.GetSupplier())
+		result = append(result, imageData{URL: v, Byte: b})
+	}
+	for _, v := range imageResp.GetB64s() {
+		decoded, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
 			return err
 		}
-		thumbnailPath, err := saveThumbnailImage(imageBytes, h.task.CreatedAt, imageResp.GetSupplier())
+		result = append(result, imageData{URL: "", Byte: decoded})
+	}
+
+	for _, v := range result {
+		path, err := saveNormalImage(v.Byte, h.task.CreatedAt, imageResp.GetSupplier())
+		if err != nil {
+			return err
+		}
+		thumbnailPath, err := saveThumbnailImage(v.Byte, h.task.CreatedAt, imageResp.GetSupplier())
 		if err != nil {
 			logs.Logger.Err(err).Msg("save thumbnail image error")
 		}
@@ -401,12 +418,12 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 			ThumbNailPath:     thumbnailPath,
 			TTL:               0,
 			Type:              string(model.OuputImageTypeNormal),
-			ModelSupplierURL:  v,
+			ModelSupplierURL:  v.URL,
 			ModelSupplierName: imageResp.GetSupplier(),
 			ModelName:         imageResp.GetModel(),
 		}
 		if config.GConfig.CloudStorageEnabled {
-			normal, err := uploadNormalImage(imageBytes)
+			normal, err := uploadNormalImage(v.Byte)
 			if err != nil {
 				return err
 			}
@@ -434,16 +451,32 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 }
 
 func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
+	type imageData struct {
+		URL  string `json:"url"`
+		Byte []byte `json:"byte"`
+	}
+	result := make([]imageData, 0)
 	for _, v := range imageResp.GetURLs() {
-		imageBytes, _, err := tools.GetOnlineImage(v)
+		b, _, err := tools.GetOnlineImage(v)
 		if err != nil {
 			return err
 		}
-		path, ratio, err := saveCompressionImage(imageBytes, 95, h.task.CreatedAt, imageResp.GetSupplier())
+		result = append(result, imageData{URL: v, Byte: b})
+	}
+	for _, v := range imageResp.GetB64s() {
+		decoded, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
 			return err
 		}
-		thumbnailPath, err := saveCompressionThumbnailImage(imageBytes, 95, h.task.CreatedAt, imageResp.GetSupplier())
+		result = append(result, imageData{URL: "", Byte: decoded})
+	}
+
+	for _, v := range result {
+		path, ratio, err := saveCompressionImage(v.Byte, 95, h.task.CreatedAt, imageResp.GetSupplier())
+		if err != nil {
+			return err
+		}
+		thumbnailPath, err := saveCompressionThumbnailImage(v.Byte, 95, h.task.CreatedAt, imageResp.GetSupplier())
 		if err != nil {
 			logs.Logger.Err(err).Msg("save thumbnail image error")
 		}
@@ -453,12 +486,12 @@ func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 			TTL:               0,
 			Type:              string(model.OuputImageTypeCompressed),
 			CompressionRatio:  sql.NullFloat64{Valid: true, Float64: ratio},
-			ModelSupplierURL:  v,
+			ModelSupplierURL:  v.URL,
 			ModelSupplierName: imageResp.GetSupplier(),
 			ModelName:         imageResp.GetModel(),
 		}
 		if config.GConfig.CloudStorageEnabled {
-			compression, _, err := uploadCompressionImage(imageBytes, 95)
+			compression, _, err := uploadCompressionImage(v.Byte, 95)
 			if err != nil {
 				return err
 			}

@@ -73,7 +73,7 @@ func (p *Provider) Create(request Request) {
 		var parser image.Parser[image.Response]
 		parser = NewFlashImageParser()
 		if tokenWithModel.Model == "gemini-nano-banana-hd" && tokenWithModel.GetSupplier().String() == consts.Geek.String() {
-			parser = image.NewGenericParser(&image.OpenAIImageStrategy{})
+			parser = image.NewGenericParser(&image.OpenAIURLStrategy{})
 		}
 		requester := image.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &content, parser)
 		requester.SetTaskID(request.TaskID) // 设置TaskID

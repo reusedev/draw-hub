@@ -90,6 +90,9 @@ func (r *CreateResponse) Succeed() bool {
 func (r *CreateResponse) GetURLs() []string {
 	return r.URLs
 }
+func (r *CreateResponse) GetB64s() []string {
+	return nil
+}
 func (r *CreateResponse) GetError() error {
 	return r.Error
 }
@@ -103,6 +106,8 @@ func (r *CreateResponse) SetBasicResponse(statusCode int, respBody string, respA
 func (r *CreateResponse) SetURLs(urls []string) {
 	r.URLs = urls
 }
+
+func (r *CreateResponse) SetB64s(b64 []string) {}
 
 func (r *CreateResponse) SetError(err error) {
 	r.Error = err

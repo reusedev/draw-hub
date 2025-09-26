@@ -12,7 +12,7 @@ type FlashImageParser struct {
 
 func NewFlashImageParser() *FlashImageParser {
 	return &FlashImageParser{
-		StreamParser: image.NewStreamParser(&image.MarkdownImageStrategy{}),
+		StreamParser: image.NewStreamParser(&image.MarkdownURLStrategy{}, &image.GenericB64Strategy{}),
 	}
 }
 
@@ -25,6 +25,7 @@ type FlashImageResponse struct {
 	RespAt     time.Time     `json:"resp_at"`
 	Duration   time.Duration `json:"duration"`
 	URLs       []string      `json:"URLs"`
+	B64s       []string      `json:"b64s"`
 	Error      error         `json:"error,omitempty"`
 	TaskID     int           `json:"task_id"` // 添加TaskID字段
 }
@@ -51,10 +52,13 @@ func (f *FlashImageResponse) DurationMs() int64 {
 	return f.Duration.Milliseconds()
 }
 func (f *FlashImageResponse) Succeed() bool {
-	return len(f.URLs) != 0
+	return len(f.URLs) != 0 || len(f.B64s) != 0
 }
 func (f *FlashImageResponse) GetURLs() []string {
 	return f.URLs
+}
+func (f *FlashImageResponse) GetB64s() []string {
+	return f.B64s
 }
 func (f *FlashImageResponse) GetError() error {
 	return f.Error
@@ -68,6 +72,10 @@ func (f *FlashImageResponse) SetBasicResponse(statusCode int, respBody string, r
 
 func (f *FlashImageResponse) SetURLs(urls []string) {
 	f.URLs = urls
+}
+
+func (f *FlashImageResponse) SetB64s(b64 []string) {
+	f.B64s = b64
 }
 
 func (f *FlashImageResponse) SetError(err error) {

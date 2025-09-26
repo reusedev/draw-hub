@@ -12,7 +12,7 @@ type Image4oParser struct {
 
 func NewImage4oParser() *Image4oParser {
 	return &Image4oParser{
-		GenericParser: image.NewGenericParser(&image.MarkdownImageStrategy{}),
+		GenericParser: image.NewGenericParser(&image.MarkdownURLStrategy{}),
 	}
 }
 
@@ -22,7 +22,7 @@ type Image1Parser struct {
 
 func NewImage1Parser() *Image1Parser {
 	return &Image1Parser{
-		GenericParser: image.NewGenericParser(&image.OpenAIImageStrategy{}),
+		GenericParser: image.NewGenericParser(&image.OpenAIURLStrategy{}),
 	}
 }
 
@@ -66,6 +66,9 @@ func (r *Image4oResponse) Succeed() bool {
 func (r *Image4oResponse) GetURLs() []string {
 	return r.URLs
 }
+func (r *Image4oResponse) GetB64s() []string {
+	return nil
+}
 func (r *Image4oResponse) GetError() error {
 	return r.Error
 }
@@ -79,6 +82,8 @@ func (r *Image4oResponse) SetBasicResponse(statusCode int, respBody string, resp
 func (r *Image4oResponse) SetURLs(urls []string) {
 	r.URLs = urls
 }
+
+func (r *Image4oResponse) SetB64s(b64 []string) {}
 
 func (r *Image4oResponse) SetError(err error) {
 	r.Error = err
@@ -132,6 +137,9 @@ func (r *Image1Response) Succeed() bool {
 func (r *Image1Response) GetURLs() []string {
 	return r.URLs
 }
+func (r *Image1Response) GetB64s() []string {
+	return nil
+}
 func (r *Image1Response) GetError() error {
 	return r.Error
 }
@@ -141,6 +149,8 @@ func (r *Image1Response) SetBasicResponse(statusCode int, respBody string, respA
 	r.RespBody = respBody
 	r.RespAt = respAt
 }
+
+func (r *Image1Response) SetB64s(b64 []string) {}
 
 func (r *Image1Response) SetURLs(urls []string) {
 	r.URLs = urls
