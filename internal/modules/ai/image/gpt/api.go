@@ -73,6 +73,9 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 	}()
 	for tokenWithModel := range ai.GTokenManager["slow_speed"].GetToken(ctx, consumeSignal) {
 		if request.Model != "" && tokenWithModel.Model != request.Model {
+			go func() {
+				consumeSignal <- struct{}{}
+			}()
 			continue
 		}
 		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
