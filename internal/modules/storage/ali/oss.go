@@ -145,3 +145,15 @@ func (o *ossClient) upload(fName, key, acl string, reader io.Reader) error {
 	}
 	return nil
 }
+
+func (o *ossClient) Delete(key string) error {
+	request := &oss.DeleteObjectRequest{
+		Bucket: oss.Ptr(o.bucketName),
+		Key:    oss.Ptr(key),
+	}
+	_, err := o.client.DeleteObject(context.TODO(), request)
+	if err != nil {
+		return err
+	}
+	return nil
+}

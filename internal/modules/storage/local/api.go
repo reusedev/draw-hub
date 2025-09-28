@@ -24,3 +24,7 @@ func SaveFile(f io.Reader, path string) error {
 	}
 	return nil
 }
+
+func DeleteFile(path string) error {
+	return os.Remove(path)
+}

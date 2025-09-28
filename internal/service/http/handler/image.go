@@ -40,7 +40,7 @@ func (s *StorageHandler) InputImage() model.InputImage {
 func (s *StorageHandler) OutputImage() model.OutputImage {
 	return s.outputImage
 }
-func (s *StorageHandler) Upload(request request.UploadRequest) error {
+func (s *StorageHandler) Upload(request request.UploadImage) error {
 	s.initInputImage(request)
 	err := s.upload(request)
 	if err != nil {
@@ -53,7 +53,7 @@ func (s *StorageHandler) Upload(request request.UploadRequest) error {
 	return nil
 }
 
-func (s *StorageHandler) Query(req request.GetImageRequest) (response.GetImage, error) {
+func (s *StorageHandler) Query(req request.GetImage) (response.GetImage, error) {
 	if req.Expire == request.ExpireDefault {
 		key := req.CacheKey()
 		v, err := s.cache.GetValue(key)
@@ -82,7 +82,43 @@ func (s *StorageHandler) Query(req request.GetImageRequest) (response.GetImage, 
 	}
 	return ret, nil
 }
-func (s *StorageHandler) query(req request.GetImageRequest) (response.GetImage, error) {
+
+func (s *StorageHandler) Delete(request request.DeleteImage) error {
+	var localPath, TNLocalPath, cloudPath string
+	if request.Type == "input" {
+		inputImage, err := dao.InputImageById(request.ID)
+		if err != nil {
+			return err
+		}
+		localPath = inputImage.Path
+		cloudPath = inputImage.Key
+	} else if request.Type == "output" {
+		outputImage, err := dao.OutputImageById(request.ID)
+		if err != nil {
+			return err
+		}
+		localPath = outputImage.Path
+		TNLocalPath = outputImage.ThumbNailPath
+		cloudPath = outputImage.Key
+	}
+	if localPath != "" {
+		p := filepath.Join(config.GConfig.LocalStorageDirectory, localPath)
+		local.DeleteFile(p)
+	}
+	if TNLocalPath != "" {
+		p := filepath.Join(config.GConfig.LocalStorageDirectory, TNLocalPath)
+		local.DeleteFile(p)
+	}
+	if cloudPath != "" && config.GConfig.CloudStorageEnabled {
+		err := ali.OssClient.Delete(cloudPath)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *StorageHandler) query(req request.GetImage) (response.GetImage, error) {
 	err := s.selectImage(req)
 	if err != nil {
 		return response.GetImage{}, err
@@ -90,7 +126,7 @@ func (s *StorageHandler) query(req request.GetImageRequest) (response.GetImage, 
 	return s.getImageResponse(req)
 }
 
-func (s *StorageHandler) selectImage(request request.GetImageRequest) error {
+func (s *StorageHandler) selectImage(request request.GetImage) error {
 	if request.Type == "input" {
 		inputImage, err := dao.InputImageById(request.ID)
 		if err != nil {
@@ -106,7 +142,7 @@ func (s *StorageHandler) selectImage(request request.GetImageRequest) error {
 	}
 	return nil
 }
-func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (response.GetImage, error) {
+func (s *StorageHandler) getImageResponse(request request.GetImage) (response.GetImage, error) {
 	var ret response.GetImage
 	var key, acl, url string
 	if request.Type == "input" {
@@ -157,7 +193,7 @@ func (s *StorageHandler) getImageResponse(request request.GetImageRequest) (resp
 	return ret, nil
 }
 
-func (s *StorageHandler) initInputImage(request request.UploadRequest) {
+func (s *StorageHandler) initInputImage(request request.UploadImage) {
 	now := time.Now()
 	s.inputImage.TTL = request.TTL
 	s.inputImage.CreatedAt = now
@@ -169,7 +205,7 @@ func (s *StorageHandler) initInputImage(request request.UploadRequest) {
 	}
 }
 
-func (s *StorageHandler) upload(request request.UploadRequest) error {
+func (s *StorageHandler) upload(request request.UploadImage) error {
 	err := s.localSave(request)
 	if err != nil {
 		return err
@@ -182,7 +218,7 @@ func (s *StorageHandler) upload(request request.UploadRequest) error {
 	}
 	return nil
 }
-func (s *StorageHandler) uploadToOSS(request request.UploadRequest) error {
+func (s *StorageHandler) uploadToOSS(request request.UploadImage) error {
 	ossReq, err := s.transformToOssUpload(request)
 	if err != nil {
 		return err
@@ -194,7 +230,7 @@ func (s *StorageHandler) uploadToOSS(request request.UploadRequest) error {
 	s.inputImage.URL = ossObject.URL
 	return nil
 }
-func (s *StorageHandler) localSave(request request.UploadRequest) error {
+func (s *StorageHandler) localSave(request request.UploadImage) error {
 	f, err := request.File.Open()
 	if err != nil {
 		return err
@@ -226,7 +262,7 @@ func (s *StorageHandler) createInputImage() error {
 	return nil
 }
 
-func (s *StorageHandler) transformToOssUpload(request request.UploadRequest) (ali.UploadRequest, error) {
+func (s *StorageHandler) transformToOssUpload(request request.UploadImage) (ali.UploadRequest, error) {
 	f, err := request.File.Open()
 	if err != nil {
 		return ali.UploadRequest{}, err
@@ -243,7 +279,7 @@ func (s *StorageHandler) transformToOssUpload(request request.UploadRequest) (al
 }
 
 func UploadImage(c *gin.Context) {
-	var req request.UploadRequest
+	var req request.UploadImage
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
@@ -265,7 +301,7 @@ func UploadImage(c *gin.Context) {
 }
 
 func GetImage(c *gin.Context) {
-	var req request.GetImageRequest
+	var req request.GetImage
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
@@ -284,4 +320,25 @@ func GetImage(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(resp))
+}
+
+func DeleteImage(c *gin.Context) {
+	var req request.DeleteImage
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	err := req.Valid()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	handler := NewStorageHandler()
+	err = handler.Delete(req)
+	if err != nil {
+		logs.Logger.Err(err).Msg("Image-Delete")
+		c.JSON(http.StatusInternalServerError, response.InternalError)
+		return
+	}
+	c.JSON(http.StatusOK, response.SuccessWithData(nil))
 }

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type UploadRequest struct {
+type UploadImage struct {
 	File   *multipart.FileHeader `form:"file" binding:"required"` // 文件字段（必须）
 	ACL    string                `form:"acl"`                     // 访问控制权限，默认 "public-read"
 	TTL    int                   `form:"ttl"`                     // TTL（存活时间），默认 "0"
@@ -15,7 +15,7 @@ type UploadRequest struct {
 
 const ExpireDefault = "168h" // 默认过期时间为 7 天
 
-func (u *UploadRequest) Valid() error {
+func (u *UploadImage) Valid() error {
 	file, err := u.File.Open()
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (u *UploadRequest) Valid() error {
 	return nil
 }
 
-func (u *UploadRequest) FullWithDefault() {
+func (u *UploadImage) FullWithDefault() {
 	if u.ACL == "" {
 		u.ACL = "public-read"
 	}
@@ -44,18 +44,18 @@ func (u *UploadRequest) FullWithDefault() {
 	}
 }
 
-type GetImageRequest struct {
+type GetImage struct {
 	ID        int    `form:"id"`        // 图片 ID
 	Type      string `form:"type"`      // 图片类型，input 或 output
 	Expire    string `form:"expire"`    // 过期时间，默认 "168h"
 	ThumbNail bool   `form:"thumbnail"` // 返回缩略图，仅对output有效
 }
 
-func (g *GetImageRequest) CacheKey() string {
+func (g *GetImage) CacheKey() string {
 	return fmt.Sprintf("image_get_%d_%s_%s_%v", g.ID, g.Type, g.Expire, g.ThumbNail)
 }
 
-func (g *GetImageRequest) Valid() error {
+func (g *GetImage) Valid() error {
 	if g.ID <= 0 {
 		return fmt.Errorf("invalid ID: %d, must be greater than 0", g.ID)
 	}
@@ -73,8 +73,20 @@ func (g *GetImageRequest) Valid() error {
 	return nil
 }
 
-func (g *GetImageRequest) FullWithDefault() {
+func (g *GetImage) FullWithDefault() {
 	if g.Expire == "" {
 		g.Expire = ExpireDefault
 	}
+}
+
+type DeleteImage struct {
+	ID   int    `form:"id"`   // 图片 ID
+	Type string `form:"type"` // 图片类型，input 或 output
+}
+
+func (d *DeleteImage) Valid() error {
+	if d.Type != "input" && d.Type != "output" {
+		return fmt.Errorf("invalid type: %s, must be 'input' or 'output'", d.Type)
+	}
+	return nil
 }
