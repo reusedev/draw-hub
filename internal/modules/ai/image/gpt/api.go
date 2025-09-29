@@ -64,58 +64,48 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 		}
 	}()
 	ret := make([]image.Response, 0)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	consumeSignal := make(chan struct{})
-	go func() {
-		consumeSignal <- struct{}{}
-	}()
-	for tokenWithModel := range ai.GTokenManager["slow_speed"].GetToken(ctx, consumeSignal) {
-		if request.Model != "" && tokenWithModel.Model != request.Model {
-			go func() {
-				consumeSignal <- struct{}{}
-			}()
+	getToken := ai.GTokenManager["slow_speed"].GetTokenIterator()
+	for {
+		token := getToken()
+		if token == nil {
+			break
+		}
+		if request.Model != "" && token.Model != request.Model {
 			continue
 		}
-		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
-			Str("token_desc", tokenWithModel.Desc).Str("model", tokenWithModel.Model).Msg("Attempting GPT SlowSpeed request")
+		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+			Str("token_desc", token.Desc).Str("model", token.Model).Msg("Attempting GPT SlowSpeed request")
 
 		content := Image4oRequest{
 			ImageBytes: request.ImageBytes,
 			Prompt:     request.Prompt,
-			Model:      tokenWithModel.Model,
+			Model:      token.Model,
 		}
-		requester := image.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &content, NewImage4oParser())
+		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage4oParser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
-			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
-				Str("model", tokenWithModel.Model).Msg("GPT SlowSpeed request failed")
-			go func() {
-				consumeSignal <- struct{}{}
-			}()
+			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).Msg("GPT SlowSpeed request failed")
 			continue
 		}
 		ret = append(ret, response)
 		if response.Succeed() {
 			urls := response.GetURLs()
-			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
-				Str("model", tokenWithModel.Model).Strs("image_urls", urls).Msg("GPT SlowSpeed request succeeded, stopping iteration")
+			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).Strs("image_urls", urls).Msg("GPT SlowSpeed request succeeded, stopping iteration")
 			break
 		} else {
-			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
-				Str("model", tokenWithModel.Model).Msg("GPT SlowSpeed request completed but failed validation, continuing")
+			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).Msg("GPT SlowSpeed request completed but failed validation, continuing")
 			if response.GetError() != nil {
 				if errors.Is(response.GetError(), image.PromptError) {
 					break
 				}
 			}
 			if image.ShouldBanToken(response) {
-				ai.GTokenManager["slow_speed"].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
+				ai.GTokenManager["slow_speed"].Ban(token.Supplier, time.Now().Add(10*time.Minute))
 			}
-			go func() {
-				consumeSignal <- struct{}{}
-			}()
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
@@ -150,20 +140,19 @@ func (p *Provider) FastSpeed(request FastRequest) {
 	ret := make([]image.Response, 0)
 	attemptCount := 0
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	consumeSignal := make(chan struct{})
-	go func() {
-		consumeSignal <- struct{}{}
-	}()
-	for tokenWithModel := range ai.GTokenManager["fast_speed"].GetToken(ctx, consumeSignal) {
+	getToken := ai.GTokenManager["fast_speed"].GetTokenIterator()
+	for {
+		token := getToken()
+		if token == nil {
+			break
+		}
 		attemptCount++
 		logs.Logger.Info().
 			Int("task_id", request.TaskID).
 			Int("attempt", attemptCount).
-			Str("supplier", tokenWithModel.Supplier.String()).
-			Str("token_desc", tokenWithModel.Desc).
-			Str("model", tokenWithModel.Model).
+			Str("supplier", token.Supplier.String()).
+			Str("token_desc", token.Desc).
+			Str("model", token.Model).
 			Str("quality", request.Quality).
 			Str("size", request.Size).
 			Msg("Attempting GPT FastSpeed request")
@@ -174,7 +163,7 @@ func (p *Provider) FastSpeed(request FastRequest) {
 			Quality:    request.Quality,
 			Size:       request.Size,
 		}
-		requester := image.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &content, NewImage1Parser())
+		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage1Parser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
@@ -182,12 +171,9 @@ func (p *Provider) FastSpeed(request FastRequest) {
 				Err(err).
 				Int("task_id", request.TaskID).
 				Int("attempt", attemptCount).
-				Str("supplier", tokenWithModel.Supplier.String()).
-				Str("model", tokenWithModel.Model).
+				Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).
 				Msg("GPT FastSpeed request failed")
-			go func() {
-				consumeSignal <- struct{}{}
-			}()
 			continue
 		}
 		ret = append(ret, response)
@@ -195,8 +181,8 @@ func (p *Provider) FastSpeed(request FastRequest) {
 			logs.Logger.Info().
 				Int("task_id", request.TaskID).
 				Int("attempt", attemptCount).
-				Str("supplier", tokenWithModel.Supplier.String()).
-				Str("model", tokenWithModel.Model).
+				Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).
 				Int("total_attempts", attemptCount).
 				Msg("GPT FastSpeed request succeeded, stopping iteration")
 			break
@@ -204,8 +190,8 @@ func (p *Provider) FastSpeed(request FastRequest) {
 			logs.Logger.Warn().
 				Int("task_id", request.TaskID).
 				Int("attempt", attemptCount).
-				Str("supplier", tokenWithModel.Supplier.String()).
-				Str("model", tokenWithModel.Model).
+				Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).
 				Msg("GPT FastSpeed request completed but failed validation, continuing")
 			if response.GetError() != nil {
 				if errors.Is(response.GetError(), image.PromptError) {
@@ -213,11 +199,8 @@ func (p *Provider) FastSpeed(request FastRequest) {
 				}
 			}
 			if image.ShouldBanToken(response) {
-				ai.GTokenManager["fast_speed"].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
+				ai.GTokenManager["fast_speed"].Ban(token.Supplier, time.Now().Add(10*time.Minute))
 			}
-			go func() {
-				consumeSignal <- struct{}{}
-			}()
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })

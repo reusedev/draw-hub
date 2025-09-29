@@ -86,25 +86,11 @@ func (t *TokenManager) Ban(supplier consts.ModelSupplier, expiredAt time.Time) {
 	t.ExpiredAt = append(t.ExpiredAt, expiredAt)
 }
 
-func (t *TokenManager) GetToken(ctx context.Context, consumeSignal chan struct{}) chan TokenWithModel {
-	tokenCh := make(chan TokenWithModel)
+func (t *TokenManager) GetTokenIterator() func() *TokenWithModel {
 	clientId := uuid.NewString()
-	go func() {
-		defer close(tokenCh)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-consumeSignal:
-				token := t.getToken(clientId)
-				if token == nil {
-					return
-				}
-				tokenCh <- *token
-			}
-		}
-	}()
-	return tokenCh
+	return func() *TokenWithModel {
+		return t.getToken(clientId)
+	}
 }
 
 func (t *TokenManager) getToken(clientId string) *TokenWithModel {

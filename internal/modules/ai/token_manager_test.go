@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"context"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/stretchr/testify/require"
 	"sync"
@@ -32,18 +31,16 @@ func TestGetToken(t *testing.T) {
 		Lock:   &sync.Mutex{},
 		Client: make([]*Client, 0),
 	}
-	tokens := make([]TokenWithModel, 0)
-	signal := make(chan struct{})
-	go func() {
-		signal <- struct{}{}
-	}()
-	for token := range m.GetToken(context.Background(), signal) {
+	tokens := make([]*TokenWithModel, 0)
+	getToken := m.GetTokenIterator()
+	for {
+		token := getToken()
+		if token == nil {
+			break
+		}
 		tokens = append(tokens, token)
-		go func() {
-			signal <- struct{}{}
-		}()
 	}
-	require.Equal(t, []TokenWithModel{
+	require.Equal(t, []*TokenWithModel{
 		{
 			Token{Token: "sk-1"},
 			"gpt-4o-image",
@@ -100,18 +97,16 @@ func TestBanToken(t *testing.T) {
 	//m.Ban(consts.Tuzi, time.Now().Add(time.Hour))
 	m.Ban(consts.Geek, time.Now().Add(time.Hour))
 
-	tokens := make([]TokenWithModel, 0)
-	signal := make(chan struct{})
-	go func() {
-		signal <- struct{}{}
-	}()
-	for token := range m.GetToken(context.Background(), signal) {
+	tokens := make([]*TokenWithModel, 0)
+	getToken := m.GetTokenIterator()
+	for {
+		token := getToken()
+		if token == nil {
+			break
+		}
 		tokens = append(tokens, token)
-		go func() {
-			signal <- struct{}{}
-		}()
 	}
-	require.Equal(t, []TokenWithModel{
+	require.Equal(t, []*TokenWithModel{
 		{
 			Token{Token: "sk-1", Supplier: consts.Tuzi},
 			"gpt-4o-image",

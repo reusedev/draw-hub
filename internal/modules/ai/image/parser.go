@@ -211,6 +211,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 
 	// 记录最终的完整内容
 	logs.Logger.Info().
+		Int("task_id", response.GetTaskID()).
 		Str("final_content", finalContent).
 		Msg("StreamParser: Final accumulated content")
 

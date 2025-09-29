@@ -1,7 +1,6 @@
 package grok
 
 import (
-	"context"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/chat"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
@@ -9,18 +8,14 @@ import (
 
 func DeepSearch(request chat.CommonRequest) []chat.Response {
 	ret := make([]chat.Response, 0)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	consumeSignal := make(chan struct{})
-	go func() {
-		consumeSignal <- struct{}{}
-	}()
-	for tokenWithModel := range ai.GTokenManager["deepsearch"].GetToken(ctx, consumeSignal) {
-		requester := chat.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &request, &chat.CommonParser{})
+	getToken := ai.GTokenManager["deepsearch"].GetTokenIterator()
+	for {
+		token := getToken()
+		if token == nil {
+			break
+		}
+		requester := chat.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &request, &chat.CommonParser{})
 		response, err := requester.Do()
-		go func() {
-			consumeSignal <- struct{}{}
-		}()
 		if err != nil {
 			logs.Logger.Err(err).Msg("grok-DeepSearch")
 			continue

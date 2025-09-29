@@ -70,7 +70,7 @@ func (m *MarkdownURLStrategy) ExtractURLs(body []byte) ([]string, error) {
 
 	// 如果仍然没有找到URL，尝试原来的正则表达式作为后备
 	if len(urls) == 0 {
-		reg := `(https?[^)]+)\)`
+		reg := `(https?://[^)]+)\)`
 		pattern, _ := regexp.Compile(reg)
 		matches := pattern.FindAllStringSubmatch(content, -1)
 		for _, match := range matches {

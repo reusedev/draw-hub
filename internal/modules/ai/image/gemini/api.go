@@ -55,57 +55,50 @@ func (p *Provider) Create(request Request) {
 		}
 	}()
 	ret := make([]image.Response, 0)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	consumeSignal := make(chan struct{})
-	go func() {
-		consumeSignal <- struct{}{}
-	}()
-	for tokenWithModel := range ai.GTokenManager[request.Model].GetToken(ctx, consumeSignal) {
-		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.GetSupplier().String()).
-			Str("token_desc", tokenWithModel.Desc).Str("model", tokenWithModel.Model).Msg("Attempting Gemini Create request")
+	getToken := ai.GTokenManager[request.Model].GetTokenIterator()
+	for {
+		token := getToken()
+		if token == nil {
+			break
+		}
+		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.GetSupplier().String()).
+			Str("token_desc", token.Desc).Str("model", token.Model).Msg("Attempting Gemini Create request")
 		content := FlashImageRequest{
 			ImageBytes: request.ImageBytes,
 			Prompt:     request.Prompt,
-			Model:      tokenWithModel.Model,
+			Model:      token.Model,
 		}
 		var parser image.Parser[image.Response]
 		parser = NewFlashImageParser()
-		if tokenWithModel.Model == "gemini-nano-banana-hd" && tokenWithModel.GetSupplier().String() == consts.Geek.String() {
+		if token.Model == "gemini-nano-banana-hd" && token.GetSupplier().String() == consts.Geek.String() {
 			parser = image.NewGenericParser(&image.OpenAIURLStrategy{})
 		}
-		requester := image.NewRequester(ai.Token{Token: tokenWithModel.Token.Token, Desc: tokenWithModel.Desc, Supplier: tokenWithModel.Supplier}, &content, parser)
+		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, parser)
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response, err := requester.Do()
 		if err != nil {
-			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
-				Str("token_desc", tokenWithModel.Desc).Str("model", tokenWithModel.Model).Msg("Gemini Create request failed")
-			go func() {
-				consumeSignal <- struct{}{}
-			}()
+			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+				Str("token_desc", token.Desc).Str("model", token.Model).Msg("Gemini Create request failed")
 			continue
 		}
 		ret = append(ret, response)
 		if response.Succeed() {
 			urls := response.GetURLs()
-			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
-				Str("model", tokenWithModel.Model).Strs("image_urls", urls).
+			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).Strs("image_urls", urls).
 				Msg("Gemini Create request succeeded, stopping iteration")
 			break
 		} else {
-			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", tokenWithModel.Supplier.String()).
-				Str("model", tokenWithModel.Model).Msg("Gemini Create request completed but failed validation, continuing")
+			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).Msg("Gemini Create request completed but failed validation, continuing")
 			if response.GetError() != nil {
 				if errors.Is(response.GetError(), image.PromptError) {
 					break
 				}
 			}
 			if image.ShouldBanToken(response) {
-				ai.GTokenManager[request.Model].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
+				ai.GTokenManager[request.Model].Ban(token.Supplier, time.Now().Add(10*time.Minute))
 			}
-			go func() {
-				consumeSignal <- struct{}{}
-			}()
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
