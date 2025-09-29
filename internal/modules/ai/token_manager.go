@@ -90,15 +90,14 @@ func (t *TokenManager) GetToken(ctx context.Context, consumeSignal chan struct{}
 	tokenCh := make(chan TokenWithModel)
 	clientId := uuid.NewString()
 	go func() {
+		defer close(tokenCh)
 		for {
 			select {
 			case <-ctx.Done():
-				close(tokenCh)
 				return
 			case <-consumeSignal:
 				token := t.getToken(clientId)
 				if token == nil {
-					close(tokenCh)
 					return
 				}
 				tokenCh <- *token
