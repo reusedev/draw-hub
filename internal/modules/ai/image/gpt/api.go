@@ -9,7 +9,6 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -111,7 +110,7 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 					break
 				}
 			}
-			if response.GetStatusCode() == http.StatusBadGateway {
+			if image.ShouldBanToken(response) {
 				ai.GTokenManager["slow_speed"].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
 			}
 			go func() {
@@ -213,7 +212,7 @@ func (p *Provider) FastSpeed(request FastRequest) {
 					break
 				}
 			}
-			if response.GetStatusCode() == http.StatusBadGateway {
+			if image.ShouldBanToken(response) {
 				ai.GTokenManager["fast_speed"].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
 			}
 			go func() {

@@ -8,7 +8,6 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -99,7 +98,7 @@ func (p *Provider) Create(request Request) {
 					break
 				}
 			}
-			if response.GetStatusCode() == http.StatusBadGateway {
+			if image.ShouldBanToken(response) {
 				ai.GTokenManager[consts.JiMengV40.String()].Ban(tokenWithModel.Supplier, time.Now().Add(10*time.Minute))
 			}
 			go func() {

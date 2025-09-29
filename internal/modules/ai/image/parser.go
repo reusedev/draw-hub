@@ -311,3 +311,11 @@ type GenericSysExitResponse struct {
 func (g *GenericSysExitResponse) GetTaskID() int {
 	return g.TaskID
 }
+
+func ShouldBanToken(response Response) bool {
+	c := response.GetStatusCode()
+	if c >= 500 && c < 600 {
+		return true
+	}
+	return false
+}
