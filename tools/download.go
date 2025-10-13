@@ -1,10 +1,12 @@
 package tools
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/disintegration/imaging"
 	"io"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -49,7 +51,10 @@ func getOnlineImage(url string) (bytes []byte, fName string, err error) {
 			return nil, "", fmt.Errorf("URL contains invalid control characters: %s", url)
 		}
 	}
-
+	// 对于 Midjourney CDN，使用 curl
+	if strings.HasPrefix(url, "https://cdn.midjourney.com") {
+		return downloadWithCurl(url)
+	}
 	client := http.Client{
 		Timeout: 100 * time.Second,
 	}
@@ -80,6 +85,35 @@ func getOnlineImage(url string) (bytes []byte, fName string, err error) {
 		}
 	}
 	return
+}
+
+func downloadWithCurl(url string) ([]byte, string, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("curl",
+		"-s", // silent
+		"-L", // follow redirects
+		"--tlsv1.3",
+		"-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+		"-H", "Referer: https://www.midjourney.com/",
+		"-H", "Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+		"-H", "Accept-Language: en-US,en;q=0.9",
+		"-H", "Accept-Encoding: gzip, deflate, br",
+		"-H", "Sec-Fetch-Dest: image",
+		"-H", "Sec-Fetch-Mode: no-cors",
+		"-H", "Sec-Fetch-Site: cross-site",
+		"-H", "DNT: 1",
+		url,
+	)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, "", fmt.Errorf("curl command failed: %w, stderr: %s", err, stderr.String())
+	}
+	data := stdout.Bytes()
+	if len(data) == 0 {
+		return nil, "", fmt.Errorf("empty response from URL: %s", url)
+	}
+	return data, "", nil
 }
 
 type ImageType string
