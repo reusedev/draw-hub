@@ -3,6 +3,10 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
+# 配置 Go 模块代理和 Alpine 镜像源
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
+    && go env -w GOPROXY=https://goproxy.cn,direct
+
 # 复制源代码
 COPY . .
 
@@ -17,8 +21,10 @@ FROM alpine:latest
 
 WORKDIR /app
 
-# 安装必要的运行时依赖
-RUN apk add --no-cache ca-certificates tzdata
+# 配置 Alpine 镜像源并安装必要的运行时依赖
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
+    && apk update \
+    && apk add --no-cache ca-certificates tzdata
 # 设置时区
 ENV TZ=Asia/Shanghai
 
