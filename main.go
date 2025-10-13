@@ -34,7 +34,7 @@ func main() {
 	config.Init(tools.PanicOnError(tools.ReadFile(configPath)))
 	config.InitTokenManager(ctx)
 	logs.InitLogger()
-	//syscall.Umask(0007)
+	syscall.Umask(0007)
 	wg := &sync.WaitGroup{}
 	queue.InitImageTaskQueue(ctx, wg)
 	mysql.CreateDataBase(config.GConfig.MySQL)

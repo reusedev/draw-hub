@@ -5,15 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
-	"time"
-
-	jsoniter "github.com/json-iterator/go"
-	"github.com/reusedev/draw-hub/internal/consts"
-	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 )
 
 type Image4oRequest struct {
@@ -55,11 +53,10 @@ func (g *Image4oRequest) BodyContentType(supplier consts.ModelSupplier) (io.Read
 func (g *Image4oRequest) Path(supplier consts.ModelSupplier) string {
 	return "v1/chat/completions"
 }
-func (g *Image4oRequest) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
+func (g *Image4oRequest) InitResponse(supplier string, tokenDesc string) image.Response {
 	ret := &Image4oResponse{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
-		Duration:  duration,
 		URLs:      []string{},
 	}
 	ret.Model = g.Model
@@ -132,11 +129,10 @@ func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reade
 func (g *Image1Request) Path(supplier consts.ModelSupplier) string {
 	return "v1/images/edits"
 }
-func (g *Image1Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
+func (g *Image1Request) InitResponse(supplier string, tokenDesc string) image.Response {
 	ret := &Image1Response{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
-		Duration:  duration,
 		URLs:      []string{},
 	}
 	ret.Model = consts.GPTImage1.String()

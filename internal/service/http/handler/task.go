@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image/gemini"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image/mj"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image/volc"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
 	"net/http"
@@ -150,6 +151,13 @@ func (h *TaskHandler) edit(ctx context.Context) {
 			TaskID:     h.task.Id,
 		}
 		volc.NewProvider(ctx, []observer.Observer{h}).Create(req)
+	} else if h.task.Model == consts.MidJourney.String() {
+		req := mj.Request{
+			ImageBytes: bs,
+			Prompt:     h.task.Prompt,
+			TaskID:     h.task.Id,
+		}
+		mj.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	}
 }
 
@@ -172,6 +180,12 @@ func (h *TaskHandler) generate(ctx context.Context) {
 			TaskID: h.task.Id,
 		}
 		volc.NewProvider(ctx, []observer.Observer{h}).Create(req)
+	} else if h.task.Model == consts.MidJourney.String() {
+		req := mj.Request{
+			Prompt: h.task.Prompt,
+			TaskID: h.task.Id,
+		}
+		mj.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else {
 		genRequest := gpt.SlowRequest{
 			Prompt: h.task.Prompt,
@@ -526,7 +540,7 @@ func (h *TaskHandler) recordSupplierInvoke() error {
 			TokenDesc:    v.GetTokenDesc(),
 			ModelName:    v.GetModel(),
 			StatusCode:   v.GetStatusCode(),
-			DurationMs:   v.DurationMs(),
+			DurationMs:   v.TaskConsumeMs(),
 			CreatedAt:    v.GetRespAt(),
 		}
 		respBody := v.GetRespBody()
@@ -595,7 +609,7 @@ func (h *TaskHandler) endWork() error {
 				Str("supplier", v.GetSupplier()).
 				Str("model", v.GetModel()).
 				Str("status", "success").
-				Int64("duration_ms", v.DurationMs()).
+				Int64("task_consume_ms", v.TaskConsumeMs()).
 				Msg("Task completed successfully")
 		} else {
 			err := v.GetError()

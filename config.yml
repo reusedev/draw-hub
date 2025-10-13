@@ -53,6 +53,10 @@ token:
     token: ""
     desc: "multichannel"
   -
+    supplier: "tuzi"
+    token: ""
+    desc: "mj"
+  -
     supplier: "geek"
     token: ""
     desc: "low_price"
@@ -181,3 +185,9 @@ request_order:
         supplier: "geek"
         desc: "low_price"
         model: "doubao-seedream-4.0"
+  midjourney:
+    -
+      -
+        supplier: "tuzi"
+        desc: "mj"
+        model: "midjourney"

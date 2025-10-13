@@ -51,16 +51,18 @@ func (j *JiMengParserStrategy) ExtractURLs(body []byte) ([]string, error) {
 }
 
 type CreateResponse struct {
-	Supplier   string        `json:"supplier"`
-	TokenDesc  string        `json:"token_desc"`
-	Model      string        `json:"model"`
-	StatusCode int           `json:"status_code"`
-	RespBody   string        `json:"resp_body"`
-	RespAt     time.Time     `json:"resp_at"`
-	Duration   time.Duration `json:"duration"`
-	Error      error         `json:"error,omitempty"`
-	TaskID     int           `json:"task_id"`
-	URLs       []string      `json:"urls"`
+	Supplier   string    `json:"supplier"`
+	TokenDesc  string    `json:"token_desc"`
+	Model      string    `json:"model"`
+	StatusCode int       `json:"status_code"`
+	RespBody   string    `json:"resp_body"`
+	StartAt    time.Time `json:"start_at"`
+	EndAt      time.Time `json:"end_at"`
+	ReqAt      time.Time `json:"req_at"`
+	RespAt     time.Time `json:"resp_at"`
+	Error      error     `json:"error,omitempty"`
+	TaskID     int       `json:"task_id"`
+	URLs       []string  `json:"urls"`
 }
 
 func (r *CreateResponse) GetSupplier() string {
@@ -81,8 +83,11 @@ func (r *CreateResponse) GetRespAt() time.Time {
 func (r *CreateResponse) GetRespBody() string {
 	return r.RespBody
 }
-func (r *CreateResponse) DurationMs() int64 {
-	return r.Duration.Milliseconds()
+func (r *CreateResponse) TaskConsumeMs() int64 {
+	return r.EndAt.Sub(r.StartAt).Milliseconds()
+}
+func (r *CreateResponse) ReqConsumeMs() int64 {
+	return r.RespAt.Sub(r.ReqAt).Milliseconds()
 }
 func (r *CreateResponse) Succeed() bool {
 	return len(r.URLs) != 0
@@ -97,9 +102,24 @@ func (r *CreateResponse) GetError() error {
 	return r.Error
 }
 
-func (r *CreateResponse) SetBasicResponse(statusCode int, respBody string, respAt time.Time) {
+func (r *CreateResponse) SetBasicResponse(statusCode int, respBody string) {
 	r.StatusCode = statusCode
 	r.RespBody = respBody
+}
+
+func (r *CreateResponse) SetStartAt(startAt time.Time) {
+	r.StartAt = startAt
+}
+
+func (r *CreateResponse) SetEndAt(endAt time.Time) {
+	r.EndAt = endAt
+}
+
+func (r *CreateResponse) SetReqAt(reqAt time.Time) {
+	r.ReqAt = reqAt
+}
+
+func (r *CreateResponse) SetRespAt(respAt time.Time) {
 	r.RespAt = respAt
 }
 

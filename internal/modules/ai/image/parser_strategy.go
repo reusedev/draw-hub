@@ -15,6 +15,10 @@ type B64ParseStrategy interface {
 	ExtractB64s(body []byte) ([]string, error)
 }
 
+type ProviderTaskIDStrategy interface {
+	ExtractProviderTaskID(body []byte) (int64, error)
+}
+
 type MarkdownURLStrategy struct{}
 
 func (m *MarkdownURLStrategy) ExtractURLs(body []byte) ([]string, error) {

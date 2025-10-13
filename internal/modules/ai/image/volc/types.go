@@ -6,7 +6,6 @@ import (
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"io"
-	"time"
 )
 
 // JiMengV40Request Reference: https://tuzi-api.apifox.cn/349741169e0
@@ -45,11 +44,10 @@ func (j *JiMengV40Request) Path(supplier consts.ModelSupplier) string {
 	return "/v1/images/generations"
 }
 
-func (j *JiMengV40Request) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
+func (j *JiMengV40Request) InitResponse(supplier string, tokenDesc string) image.Response {
 	return &CreateResponse{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
 		Model:     "jimeng_t2i_v40",
-		Duration:  duration,
 	}
 }

@@ -17,17 +17,19 @@ func NewFlashImageParser() *FlashImageParser {
 }
 
 type FlashImageResponse struct {
-	Supplier   string        `json:"supplier"`
-	TokenDesc  string        `json:"token_desc"`
-	Model      string        `json:"model"`
-	StatusCode int           `json:"status_code"`
-	RespBody   string        `json:"resp_body"`
-	RespAt     time.Time     `json:"resp_at"`
-	Duration   time.Duration `json:"duration"`
-	URLs       []string      `json:"URLs"`
-	B64s       []string      `json:"b64s"`
-	Error      error         `json:"error,omitempty"`
-	TaskID     int           `json:"task_id"` // 添加TaskID字段
+	Supplier   string    `json:"supplier"`
+	TokenDesc  string    `json:"token_desc"`
+	Model      string    `json:"model"`
+	StatusCode int       `json:"status_code"`
+	RespBody   string    `json:"resp_body"`
+	StartAt    time.Time `json:"start_at"`
+	EndAt      time.Time `json:"end_at"`
+	ReqAt      time.Time `json:"req_at"`
+	RespAt     time.Time `json:"resp_at"`
+	URLs       []string  `json:"URLs"`
+	B64s       []string  `json:"b64s"`
+	Error      error     `json:"error,omitempty"`
+	TaskID     int       `json:"task_id"` // 添加TaskID字段
 }
 
 func (f *FlashImageResponse) GetSupplier() string {
@@ -48,8 +50,11 @@ func (f *FlashImageResponse) GetRespAt() time.Time {
 func (f *FlashImageResponse) GetRespBody() string {
 	return f.RespBody
 }
-func (f *FlashImageResponse) DurationMs() int64 {
-	return f.Duration.Milliseconds()
+func (f *FlashImageResponse) TaskConsumeMs() int64 {
+	return f.EndAt.Sub(f.StartAt).Milliseconds()
+}
+func (f *FlashImageResponse) ReqConsumeMs() int64 {
+	return f.RespAt.Sub(f.ReqAt).Milliseconds()
 }
 func (f *FlashImageResponse) Succeed() bool {
 	return len(f.URLs) != 0 || len(f.B64s) != 0
@@ -64,9 +69,24 @@ func (f *FlashImageResponse) GetError() error {
 	return f.Error
 }
 
-func (f *FlashImageResponse) SetBasicResponse(statusCode int, respBody string, respAt time.Time) {
+func (f *FlashImageResponse) SetBasicResponse(statusCode int, respBody string) {
 	f.StatusCode = statusCode
 	f.RespBody = respBody
+}
+
+func (f *FlashImageResponse) SetStartAt(startAt time.Time) {
+	f.StartAt = startAt
+}
+
+func (f *FlashImageResponse) SetEndAt(endAt time.Time) {
+	f.EndAt = endAt
+}
+
+func (f *FlashImageResponse) SetReqAt(reqAt time.Time) {
+	f.ReqAt = reqAt
+}
+
+func (f *FlashImageResponse) SetRespAt(respAt time.Time) {
 	f.RespAt = respAt
 }
 

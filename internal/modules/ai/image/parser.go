@@ -14,6 +14,22 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 )
 
+type SubmitResponse interface {
+	GetReqAt() time.Time
+	GetRespAt() time.Time
+	GetProviderTaskID() int64
+	ReqConsumeMs() int64
+	GetTaskID() int
+
+	Succeed() bool
+
+	SetBasicResponse(statusCode int, respBody string)
+	SetReqAt(reqAt time.Time)
+	SetRespAt(respAt time.Time)
+	SetProviderTaskID(id int64)
+	SetTaskID(id int)
+}
+
 type Response interface {
 	GetModel() string
 	GetSupplier() string
@@ -21,7 +37,8 @@ type Response interface {
 	GetStatusCode() int
 	GetRespAt() time.Time
 	GetRespBody() string
-	DurationMs() int64
+	TaskConsumeMs() int64
+	ReqConsumeMs() int64
 	GetTaskID() int
 
 	Succeed() bool
@@ -29,7 +46,11 @@ type Response interface {
 	GetB64s() []string
 	GetError() error // is nil if Succeed() return true
 
-	SetBasicResponse(statusCode int, respBody string, respAt time.Time)
+	SetBasicResponse(statusCode int, respBody string)
+	SetStartAt(startAt time.Time)
+	SetEndAt(endAt time.Time)
+	SetReqAt(reqAt time.Time)
+	SetRespAt(respAt time.Time)
 	SetURLs(urls []string)
 	SetB64s(b64 []string)
 	SetError(err error)
@@ -42,6 +63,28 @@ type SysExitResponse interface {
 
 type Parser[T any] interface {
 	Parse(resp *http.Response, response T) error
+}
+
+type SubmitParser struct {
+	providerTaskIDStrategy ProviderTaskIDStrategy
+}
+
+func NewSubmitParser(providerTaskIDStrategy ProviderTaskIDStrategy) *SubmitParser {
+	return &SubmitParser{providerTaskIDStrategy: providerTaskIDStrategy}
+}
+
+func (s *SubmitParser) Parse(resp *http.Response, response SubmitResponse) error {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	response.SetBasicResponse(resp.StatusCode, string(body))
+	taskID, err := s.providerTaskIDStrategy.ExtractProviderTaskID(body)
+	if err != nil {
+		return err
+	}
+	response.SetProviderTaskID(taskID)
+	return nil
 }
 
 type GenericParser struct {
@@ -75,7 +118,7 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 		case <-ctx.Done():
 		}
 		// Read body with timeout, because sometime it will block about 900s.
-		response.SetBasicResponse(resp.StatusCode, string(respBody), time.Now())
+		response.SetBasicResponse(resp.StatusCode, string(respBody))
 		if detectedErr := DetectError(response, string(respBody)); detectedErr != nil {
 			response.SetError(detectedErr)
 		}
@@ -85,7 +128,7 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 	if err != nil {
 		return err
 	}
-	response.SetBasicResponse(resp.StatusCode, string(body), time.Now())
+	response.SetBasicResponse(resp.StatusCode, string(body))
 	urls, err := g.urlStrategy.ExtractURLs(body)
 	if err != nil {
 		return err
@@ -100,7 +143,7 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 			Str("path", resp.Request.URL.Path).
 			Str("method", resp.Request.Method).
 			Int("status_code", resp.StatusCode).
-			Int64("duration", response.DurationMs()).
+			Int64("req_consume_ms", response.ReqConsumeMs()).
 			Str("body", string(body)).
 			Msg("image resp error")
 		if detectedErr := DetectError(response, string(body)); detectedErr != nil {
@@ -163,7 +206,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 		case <-ctx.Done():
 		}
 		// Read body with timeout, because sometime it will block about 900s.
-		response.SetBasicResponse(resp.StatusCode, string(respBody), time.Now())
+		response.SetBasicResponse(resp.StatusCode, string(respBody))
 		if detectedErr := DetectError(response, string(respBody)); detectedErr != nil {
 			response.SetError(detectedErr)
 		}
@@ -231,7 +274,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 		return err
 	}
 	bodyString := content.String()
-	response.SetBasicResponse(resp.StatusCode, bodyString, time.Now())
+	response.SetBasicResponse(resp.StatusCode, bodyString)
 	response.SetURLs(urls)
 
 	b64s, err := s.b64Strategy.ExtractB64s([]byte(finalContent))
@@ -249,7 +292,7 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 			Str("path", resp.Request.URL.Path).
 			Str("method", resp.Request.Method).
 			Int("status_code", resp.StatusCode).
-			Int64("duration", response.DurationMs()).
+			Int64("req_consume_ms", response.ReqConsumeMs()).
 			Str("body", bodyString).
 			Msg("stream image resp error")
 		if detectedErr := DetectError(response, bodyString); detectedErr != nil {

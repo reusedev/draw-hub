@@ -117,6 +117,7 @@ type RequestOrder struct {
 	Gemini25Flash   [][]Request `yaml:"gemini-2.5-flash-image"`
 	Gemini25FlashHD [][]Request `yaml:"gemini-2.5-flash-image-hd"`
 	JiMengV40       [][]Request `yaml:"jimeng_t2i_v40"`
+	Midjourney      [][]Request `yaml:"midjourney"`
 }
 
 type Request struct {

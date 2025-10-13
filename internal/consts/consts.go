@@ -34,6 +34,7 @@ const (
 	Gemini25Flash   Model = "gemini-2.5-flash-image"
 	Gemini25FlashHD Model = "gemini-2.5-flash-image-hd"
 	JiMengV40       Model = "jimeng_t2i_v40"
+	MidJourney      Model = "midjourney"
 )
 
 func (m Model) String() string {

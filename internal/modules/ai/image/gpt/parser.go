@@ -27,16 +27,18 @@ func NewImage1Parser() *Image1Parser {
 }
 
 type Image4oResponse struct {
-	Supplier   string        `json:"supplier"`
-	TokenDesc  string        `json:"token_desc"`
-	Model      string        `json:"model"`
-	StatusCode int           `json:"status_code"`
-	RespBody   string        `json:"resp_body"`
-	RespAt     time.Time     `json:"resp_at"`
-	Duration   time.Duration `json:"duration"`
-	URLs       []string      `json:"URLs"`
-	Error      error         `json:"error,omitempty"`
-	TaskID     int           `json:"task_id"` // 添加TaskID字段
+	Supplier   string    `json:"supplier"`
+	TokenDesc  string    `json:"token_desc"`
+	Model      string    `json:"model"`
+	StatusCode int       `json:"status_code"`
+	RespBody   string    `json:"resp_body"`
+	StartAt    time.Time `json:"start_at"`
+	EndAt      time.Time `json:"end_at"`
+	ReqAt      time.Time `json:"req_at"`
+	RespAt     time.Time `json:"resp_at"`
+	URLs       []string  `json:"URLs"`
+	Error      error     `json:"error,omitempty"`
+	TaskID     int       `json:"task_id"` // 添加TaskID字段
 }
 
 func (r *Image4oResponse) GetSupplier() string {
@@ -57,8 +59,11 @@ func (r *Image4oResponse) GetRespAt() time.Time {
 func (r *Image4oResponse) GetRespBody() string {
 	return r.RespBody
 }
-func (r *Image4oResponse) DurationMs() int64 {
-	return r.Duration.Milliseconds()
+func (r *Image4oResponse) TaskConsumeMs() int64 {
+	return r.EndAt.Sub(r.StartAt).Milliseconds()
+}
+func (r *Image4oResponse) ReqConsumeMs() int64 {
+	return r.RespAt.Sub(r.ReqAt).Milliseconds()
 }
 func (r *Image4oResponse) Succeed() bool {
 	return len(r.URLs) != 0
@@ -73,9 +78,24 @@ func (r *Image4oResponse) GetError() error {
 	return r.Error
 }
 
-func (r *Image4oResponse) SetBasicResponse(statusCode int, respBody string, respAt time.Time) {
+func (r *Image4oResponse) SetBasicResponse(statusCode int, respBody string) {
 	r.StatusCode = statusCode
 	r.RespBody = respBody
+}
+
+func (r *Image4oResponse) SetStartAt(startAt time.Time) {
+	r.StartAt = startAt
+}
+
+func (r *Image4oResponse) SetEndAt(endAt time.Time) {
+	r.EndAt = endAt
+}
+
+func (r *Image4oResponse) SetReqAt(reqAt time.Time) {
+	r.ReqAt = reqAt
+}
+
+func (r *Image4oResponse) SetRespAt(respAt time.Time) {
 	r.RespAt = respAt
 }
 
@@ -98,16 +118,18 @@ func (r *Image4oResponse) SetTaskID(taskID int) {
 }
 
 type Image1Response struct {
-	Supplier   string        `json:"supplier"`
-	TokenDesc  string        `json:"token_desc"`
-	Model      string        `json:"model"`
-	StatusCode int           `json:"status_code"`
-	RespBody   string        `json:"resp_body"`
-	RespAt     time.Time     `json:"resp_at"`
-	Duration   time.Duration `json:"duration"`
-	URLs       []string      `json:"URLs"`
-	Error      error         `json:"error,omitempty"`
-	TaskID     int           `json:"task_id"` // 添加TaskID字段
+	Supplier   string    `json:"supplier"`
+	TokenDesc  string    `json:"token_desc"`
+	Model      string    `json:"model"`
+	StatusCode int       `json:"status_code"`
+	RespBody   string    `json:"resp_body"`
+	StartAt    time.Time `json:"start_at"`
+	EndAt      time.Time `json:"end_at"`
+	ReqAt      time.Time `json:"req_at"`
+	RespAt     time.Time `json:"resp_at"`
+	URLs       []string  `json:"URLs"`
+	Error      error     `json:"error,omitempty"`
+	TaskID     int       `json:"task_id"` // 添加TaskID字段
 }
 
 func (r *Image1Response) GetSupplier() string {
@@ -128,8 +150,11 @@ func (r *Image1Response) GetRespAt() time.Time {
 func (r *Image1Response) GetRespBody() string {
 	return r.RespBody
 }
-func (r *Image1Response) DurationMs() int64 {
-	return r.Duration.Milliseconds()
+func (r *Image1Response) TaskConsumeMs() int64 {
+	return r.EndAt.Sub(r.StartAt).Milliseconds()
+}
+func (r *Image1Response) ReqConsumeMs() int64 {
+	return r.RespAt.Sub(r.ReqAt).Milliseconds()
 }
 func (r *Image1Response) Succeed() bool {
 	return len(r.URLs) != 0
@@ -144,9 +169,24 @@ func (r *Image1Response) GetError() error {
 	return r.Error
 }
 
-func (r *Image1Response) SetBasicResponse(statusCode int, respBody string, respAt time.Time) {
+func (r *Image1Response) SetBasicResponse(statusCode int, respBody string) {
 	r.StatusCode = statusCode
 	r.RespBody = respBody
+}
+
+func (r *Image1Response) SetStartAt(startAt time.Time) {
+	r.StartAt = startAt
+}
+
+func (r *Image1Response) SetEndAt(endAt time.Time) {
+	r.EndAt = endAt
+}
+
+func (r *Image1Response) SetReqAt(reqAt time.Time) {
+	r.ReqAt = reqAt
+}
+
+func (r *Image1Response) SetRespAt(respAt time.Time) {
 	r.RespAt = respAt
 }
 

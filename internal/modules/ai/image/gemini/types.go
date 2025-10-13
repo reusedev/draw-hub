@@ -7,7 +7,6 @@ import (
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"io"
-	"time"
 )
 
 type FlashImageRequest struct {
@@ -63,12 +62,11 @@ func (f *FlashImageRequest) Path(supplier consts.ModelSupplier) string {
 	}
 	return "v1/chat/completions"
 }
-func (f *FlashImageRequest) InitResponse(supplier string, duration time.Duration, tokenDesc string) image.Response {
+func (f *FlashImageRequest) InitResponse(supplier string, tokenDesc string) image.Response {
 	return &FlashImageResponse{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
 		Model:     f.Model,
-		Duration:  duration,
 		URLs:      []string{},
 	}
 }
