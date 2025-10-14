@@ -125,6 +125,10 @@ func (r *AsyncRequester) Do() (Response, error) {
 			pollingRet.SetStartAt(submitRet.GetReqAt())
 			pollingRet.SetEndAt(pollingRet.GetRespAt())
 			return pollingRet, nil
+		} else {
+			if pollingRet.GetError() != nil {
+				return pollingRet, nil
+			}
 		}
 		time.Sleep(3 * time.Second)
 	}
