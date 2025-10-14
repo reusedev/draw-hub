@@ -1,5 +1,5 @@
 # 构建阶段
-FROM dockerproxy.com/library/golang:1.24-alpine AS builder
+FROM docker.m.daocloud.io/library/golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
 # 运行阶段
-FROM alpine:latest
+FROM docker.m.daocloud.io/library/alpine:latest
 
 WORKDIR /app
 
