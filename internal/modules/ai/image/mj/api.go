@@ -85,7 +85,7 @@ func (p *Provider) Create(request Request) {
 			&content,
 			image.NewSubmitParser(&providerTaskIDStrategy{}),
 			&pollingContent,
-			image.NewGenericParser(&urlStrategy{}),
+			parser{&urlStrategy{}},
 			func(response image.SubmitResponse) {
 				pollingContent.ID = strconv.FormatInt(response.GetProviderTaskID(), 10)
 			},

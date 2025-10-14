@@ -2,7 +2,12 @@ package mj
 
 import (
 	"encoding/json"
+	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
+	"github.com/reusedev/draw-hub/internal/modules/logs"
+	"io"
+	"net/http"
 	"time"
 )
 
@@ -171,4 +176,48 @@ func (u *urlStrategy) ExtractURLs(body []byte) ([]string, error) {
 		urls = append(urls, url.URL)
 	}
 	return urls, nil
+}
+
+type parser struct {
+	urlStrategy image.URLParseStrategy
+}
+
+func (p parser) Parse(resp *http.Response, response image.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		response.SetBasicResponse(resp.StatusCode, string(data))
+		response.SetError(image.StatusCodeError)
+		return nil
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	response.SetBasicResponse(resp.StatusCode, string(body))
+	urls, err := p.urlStrategy.ExtractURLs(body)
+	if err != nil {
+		return err
+	}
+	response.SetURLs(urls)
+	if !response.Succeed() {
+		logs.Logger.Warn().
+			Int("task_id", response.GetTaskID()).
+			Str("supplier", response.GetSupplier()).
+			Str("token_desc", response.GetTokenDesc()).
+			Str("model", response.GetModel()).
+			Str("path", resp.Request.URL.Path).
+			Str("method", resp.Request.Method).
+			Int("status_code", resp.StatusCode).
+			Int64("req_consume_ms", response.ReqConsumeMs()).
+			Str("body", string(body)).
+			Msg("image resp error")
+		failReason := jsoniter.Get(body, "failReason").ToString()
+		if failReason != "" {
+			response.SetError(fmt.Errorf(failReason))
+		}
+	}
+	return nil
 }
