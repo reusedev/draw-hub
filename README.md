@@ -10,7 +10,12 @@ AI 绘图服务，对接了多家不同的供应商
 
 模型:
 ✅ gpt-4o-image
+✅ gpt-4o-image-vip
 ✅ gpt-image-1
+✅ gemini-2.5-flash-image
+✅ gemini-2.5-flash-image-hd
+✅ jimeng_t2i_v40
+✅ midjourney
 
 绘图供应商:
 ✅ [Geek](https://geekai.dev/chat?invite_code=naHMII)
