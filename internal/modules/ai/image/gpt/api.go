@@ -3,7 +3,6 @@ package gpt
 import (
 	"context"
 	"errors"
-	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
@@ -64,7 +63,15 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 		}
 	}()
 	ret := make([]image.Response, 0)
-	getToken := ai.GTokenManager["slow_speed"].GetTokenIterator()
+	var model string
+	var getToken func() *ai.TokenWithModel
+	if request.Model == consts.GPT4oImageVip.String() {
+		getToken = ai.GTokenManager[consts.GPT4oImageVip.String()].GetTokenIterator()
+		model = consts.GPT4oImageVip.String()
+	} else {
+		getToken = ai.GTokenManager[consts.GPT4oImage.String()].GetTokenIterator()
+		model = consts.GPT4oImage.String()
+	}
 	for {
 		token := getToken()
 		if token == nil {
@@ -104,11 +111,11 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 				}
 			}
 			if image.ShouldBanToken(response) {
-				ai.GTokenManager["slow_speed"].Ban(token.Supplier, time.Now().Add(10*time.Minute))
+				ai.GTokenManager[model].Ban(token.Supplier, time.Now().Add(10*time.Minute))
 			}
 		}
 	}
-	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
+	once.Do(func() { p.Notify(consts.EventTaskEnd, ret) })
 }
 
 func (p *Provider) FastSpeed(request FastRequest) {
@@ -134,13 +141,12 @@ func (p *Provider) FastSpeed(request FastRequest) {
 		Str("method", "FastSpeed").
 		Str("quality", request.Quality).
 		Str("size", request.Size).
-		Int("available_orders", len(config.GConfig.RequestOrder.FastSpeed)).
 		Msg("GPT FastSpeed method started")
 
 	ret := make([]image.Response, 0)
 	attemptCount := 0
 
-	getToken := ai.GTokenManager["fast_speed"].GetTokenIterator()
+	getToken := ai.GTokenManager[consts.GPTImage1.String()].GetTokenIterator()
 	for {
 		token := getToken()
 		if token == nil {
@@ -199,9 +205,9 @@ func (p *Provider) FastSpeed(request FastRequest) {
 				}
 			}
 			if image.ShouldBanToken(response) {
-				ai.GTokenManager["fast_speed"].Ban(token.Supplier, time.Now().Add(10*time.Minute))
+				ai.GTokenManager[consts.GPTImage1.String()].Ban(token.Supplier, time.Now().Add(10*time.Minute))
 			}
 		}
 	}
-	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
+	once.Do(func() { p.Notify(consts.EventTaskEnd, ret) })
 }

@@ -273,7 +273,7 @@ var (
 			"图片检测系统认为内容可能违反相关政策": PromptError,
 		},
 		consts.V3.String() + consts.GPT4oImageVip.String(): {
-			"该任务的输入或者输出可能违反了OpenAI的相关服务政策，请重新发起请求或调整提示词进行重试": PromptError,
+			"输入的提示词或视频的输出内容违反了OpenAI的相关服务政策，请调整提示词后进行重试": PromptError,
 		},
 		consts.Geek.String() + consts.GPTImage1.String(): {
 			"Your request may contain content that is not allowed by our safety system. Please try change the prompt and image.": PromptError,

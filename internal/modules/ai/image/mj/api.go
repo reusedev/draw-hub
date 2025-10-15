@@ -117,5 +117,5 @@ func (p *Provider) Create(request Request) {
 			}
 		}
 	}
-	once.Do(func() { p.Notify(consts.EventSyncCreate, ret) })
+	once.Do(func() { p.Notify(consts.EventTaskEnd, ret) })
 }

@@ -111,8 +111,9 @@ type Token struct {
 }
 
 type RequestOrder struct {
-	SlowSpeed       [][]Request `yaml:"slow_speed"`
-	FastSpeed       [][]Request `yaml:"fast_speed"`
+	GPT4oImage      [][]Request `yaml:"gpt-4o-image"`
+	GPT4oImageVip   [][]Request `yaml:"gpt-4o-image-vip"`
+	GPTImage1       [][]Request `yaml:"gpt-image-1"`
 	DeepSearch      [][]Request `yaml:"deepsearch"`
 	Gemini25Flash   [][]Request `yaml:"gemini-2.5-flash-image"`
 	Gemini25FlashHD [][]Request `yaml:"gemini-2.5-flash-image-hd"`

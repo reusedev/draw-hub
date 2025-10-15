@@ -560,7 +560,7 @@ func (h *TaskHandler) recordSupplierInvoke() error {
 
 func (h *TaskHandler) Update(event int, data interface{}) {
 	defer h.wg.Done()
-	if event == consts.EventSyncCreate {
+	if event == consts.EventTaskEnd {
 		h.imageResponse = data.([]image.Response)
 		err := h.endWork()
 		if err != nil {
