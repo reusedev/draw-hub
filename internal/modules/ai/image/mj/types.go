@@ -49,5 +49,6 @@ func (f *FetchRequest) InitResponse(supplier string, tokenDesc string) image.Res
 	return &FetchResponse{
 		Supplier:  supplier,
 		TokenDesc: tokenDesc,
+		Model:     consts.MidJourney.String(),
 	}
 }
