@@ -64,9 +64,11 @@ func (f *FlashImageRequest) Path(supplier consts.ModelSupplier) string {
 }
 func (f *FlashImageRequest) InitResponse(supplier string, tokenDesc string) image.Response {
 	return &FlashImageResponse{
-		Supplier:  supplier,
-		TokenDesc: tokenDesc,
-		Model:     f.Model,
-		URLs:      []string{},
+		image.BaseResponse{
+			Supplier:  supplier,
+			TokenDesc: tokenDesc,
+			Model:     f.Model,
+			URLs:      []string{},
+		},
 	}
 }

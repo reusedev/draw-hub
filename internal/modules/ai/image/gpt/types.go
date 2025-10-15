@@ -55,11 +55,13 @@ func (g *Image4oRequest) Path(supplier consts.ModelSupplier) string {
 }
 func (g *Image4oRequest) InitResponse(supplier string, tokenDesc string) image.Response {
 	ret := &Image4oResponse{
-		Supplier:  supplier,
-		TokenDesc: tokenDesc,
-		URLs:      []string{},
+		image.BaseResponse{
+			Supplier:  supplier,
+			TokenDesc: tokenDesc,
+			Model:     g.Model,
+			URLs:      []string{},
+		},
 	}
-	ret.Model = g.Model
 	return ret
 }
 
@@ -131,10 +133,12 @@ func (g *Image1Request) Path(supplier consts.ModelSupplier) string {
 }
 func (g *Image1Request) InitResponse(supplier string, tokenDesc string) image.Response {
 	ret := &Image1Response{
-		Supplier:  supplier,
-		TokenDesc: tokenDesc,
-		URLs:      []string{},
+		image.BaseResponse{
+			Supplier:  supplier,
+			TokenDesc: tokenDesc,
+			Model:     consts.GPTImage1.String(),
+			URLs:      []string{},
+		},
 	}
-	ret.Model = consts.GPTImage1.String()
 	return ret
 }

@@ -47,8 +47,10 @@ func (f *FetchRequest) Path(supplier consts.ModelSupplier) string {
 
 func (f *FetchRequest) InitResponse(supplier string, tokenDesc string) image.Response {
 	return &FetchResponse{
-		Supplier:  supplier,
-		TokenDesc: tokenDesc,
-		Model:     consts.MidJourney.String(),
+		image.BaseResponse{
+			Supplier:  supplier,
+			TokenDesc: tokenDesc,
+			Model:     consts.MidJourney.String(),
+		},
 	}
 }

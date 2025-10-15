@@ -46,8 +46,10 @@ func (j *JiMengV40Request) Path(supplier consts.ModelSupplier) string {
 
 func (j *JiMengV40Request) InitResponse(supplier string, tokenDesc string) image.Response {
 	return &CreateResponse{
-		Supplier:  supplier,
-		TokenDesc: tokenDesc,
-		Model:     "jimeng_t2i_v40",
+		image.BaseResponse{
+			Supplier:  supplier,
+			TokenDesc: tokenDesc,
+			Model:     consts.JiMengV40.String(),
+		},
 	}
 }

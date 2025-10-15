@@ -14,53 +14,6 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 )
 
-type SubmitResponse interface {
-	GetReqAt() time.Time
-	GetRespAt() time.Time
-	GetProviderTaskID() int64
-	ReqConsumeMs() int64
-	GetTaskID() int
-
-	Succeed() bool
-
-	SetBasicResponse(statusCode int, respBody string)
-	SetReqAt(reqAt time.Time)
-	SetRespAt(respAt time.Time)
-	SetProviderTaskID(id int64)
-	SetTaskID(id int)
-}
-
-type Response interface {
-	GetModel() string
-	GetSupplier() string
-	GetTokenDesc() string
-	GetStatusCode() int
-	GetRespAt() time.Time
-	GetRespBody() string
-	TaskConsumeMs() int64
-	ReqConsumeMs() int64
-	GetTaskID() int
-
-	Succeed() bool
-	GetURLs() []string
-	GetB64s() []string
-	GetError() error // is nil if Succeed() return true
-
-	SetBasicResponse(statusCode int, respBody string)
-	SetStartAt(startAt time.Time)
-	SetEndAt(endAt time.Time)
-	SetReqAt(reqAt time.Time)
-	SetRespAt(respAt time.Time)
-	SetURLs(urls []string)
-	SetB64s(b64 []string)
-	SetError(err error)
-	SetTaskID(taskID int)
-}
-
-type SysExitResponse interface {
-	GetTaskID() int
-}
-
 type Parser[T any] interface {
 	Parse(resp *http.Response, response T) error
 }
