@@ -2,7 +2,7 @@ package mj
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
@@ -129,8 +129,35 @@ func (p parser) Parse(resp *http.Response, response image.Response) error {
 			Msg("image resp error")
 		failReason := jsoniter.Get(body, "failReason").ToString()
 		if failReason != "" {
-			response.SetError(fmt.Errorf(failReason))
+			response.SetError(errors.New(failReason))
 		}
 	}
 	return nil
+}
+
+type geekGenerateResponse struct {
+	image.BaseResponse
+}
+
+type geekGenerateURLStrategy struct{}
+
+func (e *geekGenerateURLStrategy) ExtractURLs(body []byte) ([]string, error) {
+	var resp struct {
+		Model      string `json:"model"`
+		Created    int    `json:"created"`
+		TaskId     string `json:"task_id"`
+		TaskStatus string `json:"task_status"`
+		Data       []struct {
+			Url string `json:"url"`
+		} `json:"data"`
+	}
+	err := json.Unmarshal(body, &resp)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]string, 0)
+	for _, v := range resp.Data {
+		ret = append(ret, v.Url)
+	}
+	return ret, nil
 }

@@ -54,3 +54,36 @@ func (f *FetchRequest) InitResponse(supplier string, tokenDesc string) image.Res
 		},
 	}
 }
+
+type geekGenerateRequest struct {
+	Prompt string
+	Image  []string
+}
+
+func (e *geekGenerateRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
+	req := make(map[string]interface{})
+	req["model"] = "midjourney-imagine"
+	req["prompt"] = e.Prompt
+	if len(e.Image) != 0 {
+		req["image"] = e.Image
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, "application/json", err
+	}
+	return bytes.NewReader(body), "application/json", nil
+}
+
+func (e *geekGenerateRequest) Path(supplier consts.ModelSupplier) string {
+	return "v1/images/generations"
+}
+
+func (e *geekGenerateRequest) InitResponse(supplier string, tokenDesc string) image.Response {
+	return &geekGenerateResponse{
+		image.BaseResponse{
+			Supplier:  supplier,
+			TokenDesc: tokenDesc,
+			Model:     consts.MidJourney.String(),
+		},
+	}
+}
