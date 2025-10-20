@@ -408,6 +408,13 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 		if err != nil {
 			return err
 		}
+		tp := http.DetectContentType(b)
+		if h.task.Model == consts.MidJourney.String() {
+			logs.Logger.Debug().Str("b64", base64.StdEncoding.EncodeToString(b)).
+				Str("url", v).
+				Str("contentType", tp).
+				Msg("midjourney b64")
+		}
 		result = append(result, imageData{URL: v, Byte: b})
 	}
 	for _, v := range imageResp.GetB64s() {
