@@ -410,7 +410,8 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 		}
 		tp := http.DetectContentType(b)
 		if h.task.Model == consts.MidJourney.String() {
-			logs.Logger.Debug().Str("b64", base64.StdEncoding.EncodeToString(b)).
+			logs.Logger.Info().
+				Int("byte", len(b)).
 				Str("url", v).
 				Str("contentType", tp).
 				Msg("midjourney b64")
