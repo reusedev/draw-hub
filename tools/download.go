@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/disintegration/imaging"
+	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"os/exec"
@@ -83,6 +84,10 @@ func getOnlineImage(url string) (bytes []byte, fName string, err error) {
 				break
 			}
 		}
+	}
+	if fName == "" {
+		contentTp := DetectImageType(bytes)
+		fName = uuid.NewString() + "." + contentTp.String()
 	}
 	return
 }

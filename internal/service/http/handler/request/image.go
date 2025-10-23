@@ -7,20 +7,22 @@ import (
 )
 
 type UploadImage struct {
-	File   *multipart.FileHeader `form:"file" binding:"required"` // 文件字段（必须）
-	ACL    string                `form:"acl"`                     // 访问控制权限，默认 "public-read"
-	TTL    int                   `form:"ttl"`                     // TTL（存活时间），默认 "0"
-	Expire string                `form:"expire"`                  // 过期时间，默认 "168h"
+	File   *multipart.FileHeader `form:"file"`   // 文件字段，优先上传该字段
+	URL    string                `form:"url"`    // 文件URL
+	ACL    string                `form:"acl"`    // 访问控制权限，默认 "public-read"
+	TTL    int                   `form:"ttl"`    // TTL（存活时间），默认 "0"
+	Expire string                `form:"expire"` // 过期时间，默认 "168h"
+
+	OnlineFileName    string `form:"-"`
+	OnlineFileContent []byte `form:"-"`
 }
 
 const ExpireDefault = "168h" // 默认过期时间为 7 天
 
 func (u *UploadImage) Valid() error {
-	file, err := u.File.Open()
-	if err != nil {
-		return err
+	if u.File == nil && u.URL == "" {
+		return fmt.Errorf("must fill file or url")
 	}
-	defer file.Close()
 	if u.ACL != "" && u.ACL != "public-read" && u.ACL != "private" {
 		return fmt.Errorf("invalid ACL: %s, must be 'public-read' or 'private'", u.ACL)
 	}

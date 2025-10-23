@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/reusedev/draw-hub/config"
@@ -13,6 +14,8 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/storage/local"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
+	"github.com/reusedev/draw-hub/tools"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -41,6 +44,14 @@ func (s *StorageHandler) OutputImage() model.OutputImage {
 	return s.outputImage
 }
 func (s *StorageHandler) Upload(request request.UploadImage) error {
+	if request.URL != "" {
+		b, fName, err := tools.GetOnlineImage(request.URL)
+		if err != nil {
+			return err
+		}
+		request.OnlineFileName = fName
+		request.OnlineFileContent = b
+	}
 	s.initInputImage(request)
 	err := s.upload(request)
 	if err != nil {
@@ -195,11 +206,17 @@ func (s *StorageHandler) getImageResponse(request request.GetImage) (response.Ge
 
 func (s *StorageHandler) initInputImage(request request.UploadImage) {
 	now := time.Now()
+	var fName string
+	if request.File != nil {
+		fName = request.File.Filename
+	} else if request.URL != "" {
+		fName = request.OnlineFileName
+	}
 	s.inputImage.TTL = request.TTL
 	s.inputImage.CreatedAt = now
-	s.inputImage.Path = s.localStoragePath(request.File.Filename, now)
+	s.inputImage.Path = s.localStoragePath(fName, now)
 	if config.GConfig.CloudStorageEnabled {
-		s.inputImage.Key = s.ossStorageKey(request.File.Filename)
+		s.inputImage.Key = s.ossStorageKey(fName)
 		s.inputImage.ACL = request.ACL
 		s.inputImage.StorageSupplierName = config.GConfig.CloudStorageSupplier
 	}
@@ -231,13 +248,19 @@ func (s *StorageHandler) uploadToOSS(request request.UploadImage) error {
 	return nil
 }
 func (s *StorageHandler) localSave(request request.UploadImage) error {
-	f, err := request.File.Open()
-	if err != nil {
-		return err
+	var file io.Reader
+	if request.File != nil {
+		f, err := request.File.Open()
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		file = f
+	} else if request.URL != "" {
+		file = bytes.NewReader(request.OnlineFileContent)
 	}
-	defer f.Close()
 	absPath := filepath.Join(config.GConfig.LocalStorageDirectory, s.inputImage.Path)
-	err = local.SaveFile(f, absPath)
+	err := local.SaveFile(file, absPath)
 	if err != nil {
 		return err
 	}
@@ -263,15 +286,24 @@ func (s *StorageHandler) createInputImage() error {
 }
 
 func (s *StorageHandler) transformToOssUpload(request request.UploadImage) (ali.UploadRequest, error) {
-	f, err := request.File.Open()
-	if err != nil {
-		return ali.UploadRequest{}, err
+	var file io.Reader
+	var fName string
+	if request.File != nil {
+		f, err := request.File.Open()
+		if err != nil {
+			return ali.UploadRequest{}, err
+		}
+		file = f
+		fName = request.File.Filename
+	} else if request.URL != "" {
+		file = bytes.NewReader(request.OnlineFileContent)
+		fName = request.OnlineFileName
 	}
 	urlExpire, _ := time.ParseDuration(config.GConfig.URLExpires)
 	ret := ali.UploadRequest{
 		Key:       s.inputImage.Key,
-		Filename:  request.File.Filename,
-		File:      f,
+		Filename:  fName,
+		File:      file,
 		Acl:       s.inputImage.ACL,
 		URLExpire: urlExpire,
 	}
