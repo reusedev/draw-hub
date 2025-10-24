@@ -153,6 +153,7 @@ func (h *TaskHandler) edit(ctx context.Context) {
 		volc.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else if h.task.Model == consts.MidJourney.String() {
 		req := mj.Request{
+			ImageURLs:  urls,
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
 			TaskID:     h.task.Id,

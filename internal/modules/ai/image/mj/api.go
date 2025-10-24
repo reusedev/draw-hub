@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
@@ -58,12 +59,6 @@ func (p *Provider) Create(request Request) {
 	}()
 	ret := make([]image.Response, 0)
 	getToken := ai.GTokenManager[consts.MidJourney.String()].GetTokenIterator()
-	b64s := make([]string, 0)
-	if len(request.ImageBytes) != 0 {
-		for _, v := range request.ImageBytes {
-			b64s = append(b64s, base64.StdEncoding.EncodeToString(v))
-		}
-	}
 	for {
 		token := getToken()
 		if token == nil {
@@ -71,27 +66,7 @@ func (p *Provider) Create(request Request) {
 		}
 		logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
 			Str("token_desc", token.Desc).Str("model", token.Model).Msg("Attempting Midjourney Create request")
-		content := ImagineRequest{
-			Prompt:      request.Prompt,
-			Base64Array: b64s,
-		}
-		pollingContent := FetchRequest{}
-		requester := image.NewAsyncRequester(
-			ai.Token{
-				Token:    token.Token.Token,
-				Desc:     token.Desc,
-				Supplier: token.Supplier,
-			},
-			&content,
-			image.NewSubmitParser(&providerTaskIDStrategy{}),
-			&pollingContent,
-			parser{&urlStrategy{}},
-			func(response image.SubmitResponse) {
-				pollingContent.ID = strconv.FormatInt(response.GetProviderTaskID(), 10)
-			},
-		)
-		requester.SetTaskID(request.TaskID) // 设置TaskID
-		response, err := requester.Do()
+		response, err := p.create(request, token)
 		if err != nil {
 			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
 				Str("model", token.Model).Msg("Midjourney Create request failed")
@@ -118,4 +93,67 @@ func (p *Provider) Create(request Request) {
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventTaskEnd, ret) })
+}
+
+func (p *Provider) create(request Request, token *ai.TokenWithModel) (image.Response, error) {
+	if token.Supplier == consts.Tuzi {
+		b64s := make([]string, 0)
+		if len(request.ImageBytes) != 0 {
+			for _, v := range request.ImageBytes {
+				b64s = append(b64s, base64.StdEncoding.EncodeToString(v))
+			}
+		}
+		content := ImagineRequest{
+			Prompt:      request.Prompt,
+			Base64Array: b64s,
+		}
+		pollingContent := FetchRequest{}
+		requester := image.NewAsyncRequester(
+			token.Token,
+			&content,
+			image.NewSubmitParser(&providerTaskIDStrategy{}),
+			&pollingContent,
+			parser{&tuziUrlStrategy{}},
+			func(response image.SubmitResponse) {
+				pollingContent.ID = strconv.FormatInt(response.GetProviderTaskID(), 10)
+			},
+		)
+		requester.SetTaskID(request.TaskID)
+		return requester.Do()
+	} else if token.Supplier == consts.Geek {
+		reqType := geekGenerateRequest{
+			Prompt: request.Prompt,
+			Image:  request.ImageURLs,
+		}
+		requester := image.NewRequester(
+			token.Token,
+			&reqType,
+			image.NewGenericParser(&geekGenerateURLStrategy{}),
+		)
+		return requester.Do()
+	} else if token.Supplier == consts.V3 {
+		b64s := make([]string, 0)
+		if len(request.ImageBytes) != 0 {
+			for _, v := range request.ImageBytes {
+				b64s = append(b64s, base64.StdEncoding.EncodeToString(v))
+			}
+		}
+		reqType := &ImagineRequest{
+			Prompt:      request.Prompt,
+			Base64Array: b64s,
+		}
+		pollingContent := FetchRequest{}
+		requester := image.NewAsyncRequester(
+			token.Token,
+			reqType,
+			image.NewSubmitParser(&providerTaskIDStrategy{}),
+			&pollingContent,
+			parser{&v3UrlStrategy{}},
+			func(response image.SubmitResponse) {
+				pollingContent.ID = strconv.FormatInt(response.GetProviderTaskID(), 10)
+			},
+		)
+		return requester.Do()
+	}
+	return nil, fmt.Errorf("not support supplier: %s", token.Supplier)
 }

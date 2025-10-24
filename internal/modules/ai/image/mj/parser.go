@@ -72,9 +72,9 @@ type FetchResponse struct {
 	image.BaseResponse
 }
 
-type urlStrategy struct{}
+type tuziUrlStrategy struct{}
 
-func (u *urlStrategy) ExtractURLs(body []byte) ([]string, error) {
+func (t *tuziUrlStrategy) ExtractURLs(body []byte) ([]string, error) {
 	urls := make([]string, 0)
 	var response struct {
 		ImageURLs []struct {
@@ -87,6 +87,23 @@ func (u *urlStrategy) ExtractURLs(body []byte) ([]string, error) {
 	}
 	for _, url := range response.ImageURLs {
 		urls = append(urls, url.URL)
+	}
+	return urls, nil
+}
+
+type v3UrlStrategy struct{}
+
+func (v *v3UrlStrategy) ExtractURLs(body []byte) ([]string, error) {
+	urls := make([]string, 0)
+	var response struct {
+		ImageURL string `json:"imageUrl"`
+	}
+	err := json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, err
+	}
+	if response.ImageURL != "" {
+		urls = append(urls, response.ImageURL)
 	}
 	return urls, nil
 }
