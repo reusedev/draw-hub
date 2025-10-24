@@ -86,17 +86,16 @@ func (p *Provider) Create(request Request) {
 				Str("model", token.Model).Strs("image_urls", urls).
 				Msg("JiMeng Create request succeeded, stopping iteration")
 			break
-		} else {
-			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
-				Str("model", token.Model).Msg("JiMeng Create request completed but failed validation, continuing")
-			if response.GetError() != nil {
-				if errors.Is(response.GetError(), image.PromptError) {
-					break
-				}
+		}
+		logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+			Str("model", token.Model).Msg("JiMeng Create request completed but failed validation, continuing")
+		if response.GetError() != nil {
+			if errors.Is(response.GetError(), image.PromptError) {
+				break
 			}
-			if image.ShouldBanToken(response) {
-				ai.GTokenManager[consts.JiMengV40.String()].Ban(token.Supplier, time.Now().Add(10*time.Minute))
-			}
+		}
+		if image.ShouldBanToken(response) {
+			ai.GTokenManager[consts.JiMengV40.String()].Ban(token.Supplier, time.Now().Add(10*time.Minute))
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventTaskEnd, ret) })

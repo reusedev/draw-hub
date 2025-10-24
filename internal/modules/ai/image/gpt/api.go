@@ -102,17 +102,16 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
 				Str("model", token.Model).Strs("image_urls", urls).Msg("GPT SlowSpeed request succeeded, stopping iteration")
 			break
-		} else {
-			logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
-				Str("model", token.Model).Msg("GPT SlowSpeed request completed but failed validation, continuing")
-			if response.GetError() != nil {
-				if errors.Is(response.GetError(), image.PromptError) {
-					break
-				}
+		}
+		logs.Logger.Warn().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+			Str("model", token.Model).Msg("GPT SlowSpeed request completed but failed validation, continuing")
+		if response.GetError() != nil {
+			if errors.Is(response.GetError(), image.PromptError) {
+				break
 			}
-			if image.ShouldBanToken(response) {
-				ai.GTokenManager[model].Ban(token.Supplier, time.Now().Add(10*time.Minute))
-			}
+		}
+		if image.ShouldBanToken(response) {
+			ai.GTokenManager[model].Ban(token.Supplier, time.Now().Add(10*time.Minute))
 		}
 	}
 	once.Do(func() { p.Notify(consts.EventTaskEnd, ret) })

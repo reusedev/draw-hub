@@ -144,9 +144,15 @@ func (p parser) Parse(resp *http.Response, response image.Response) error {
 			Int64("req_consume_ms", response.ReqConsumeMs()).
 			Str("body", string(body)).
 			Msg("image resp error")
+		// tuzi v3
 		failReason := jsoniter.Get(body, "failReason").ToString()
 		if failReason != "" {
 			response.SetError(errors.New(failReason))
+		}
+		// geek
+		taskStatus := jsoniter.Get(body, "task_status").ToString()
+		if taskStatus == "failed" {
+			response.SetError(errors.New(taskStatus))
 		}
 	}
 	return nil
