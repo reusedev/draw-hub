@@ -190,3 +190,11 @@ request_order:
         supplier: "tuzi"
         desc: "mj"
         model: "midjourney"
+    -
+      - supplier: "geek"
+        desc: "low_price"
+        model: "midjourney"
+    -
+      - supplier: "v3"
+        desc: "default"
+        model: "midjourney"
