@@ -105,6 +105,11 @@ request_order:
   gpt-image-1:
     -
       -
+        supplier: "tuzi"
+        desc: "default"
+        model: "gpt-image-1"
+    -
+      -
         supplier: "geek"
         desc: "low_price"
         model: "gpt-image-1"

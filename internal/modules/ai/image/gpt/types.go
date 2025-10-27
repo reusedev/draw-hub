@@ -113,6 +113,18 @@ func (g *Image1Request) BodyContentType(supplier consts.ModelSupplier) (io.Reade
 				return nil, "", err
 			}
 		}
+		if len(g.ImageBytes) == 0 {
+			header := make(textproto.MIMEHeader)
+			header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="image"; filename="%s"`, "image.png"))
+			filePart, err := writer.CreatePart(header)
+			if err != nil {
+				return nil, "", err
+			}
+			_, err = filePart.Write(nil)
+			if err != nil {
+				return nil, "", err
+			}
+		}
 		_ = writer.WriteField("prompt", g.Prompt)
 		_ = writer.WriteField("model", "gpt-image-1")
 		if g.Quality != "" {

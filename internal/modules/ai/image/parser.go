@@ -42,10 +42,14 @@ func (s *SubmitParser) Parse(resp *http.Response, response SubmitResponse) error
 
 type GenericParser struct {
 	urlStrategy URLParseStrategy
+	b64Strategy B64ParseStrategy
 }
 
-func NewGenericParser(urlStrategy URLParseStrategy) *GenericParser {
-	return &GenericParser{urlStrategy: urlStrategy}
+func NewGenericParser(urlStrategy URLParseStrategy, b64Strategy B64ParseStrategy) *GenericParser {
+	return &GenericParser{
+		urlStrategy: urlStrategy,
+		b64Strategy: b64Strategy,
+	}
 }
 
 func (g *GenericParser) Parse(resp *http.Response, response Response) error {
@@ -84,9 +88,16 @@ func (g *GenericParser) Parse(resp *http.Response, response Response) error {
 	response.SetBasicResponse(resp.StatusCode, string(body))
 	urls, err := g.urlStrategy.ExtractURLs(body)
 	if err != nil {
-		return err
+		logs.Logger.Err(err).Int("task_id", response.GetTaskID()).
+			Msg("Extract urls error")
 	}
 	response.SetURLs(urls)
+	b64s, err := g.b64Strategy.ExtractB64s(body)
+	if err != nil {
+		logs.Logger.Err(err).Int("task_id", response.GetTaskID()).
+			Msg("Extract b64s error")
+	}
+	response.SetB64s(b64s)
 	if !response.Succeed() {
 		logs.Logger.Warn().
 			Int("task_id", response.GetTaskID()).
@@ -232,7 +243,8 @@ func (s *StreamParser) Parse(resp *http.Response, response Response) error {
 
 	b64s, err := s.b64Strategy.ExtractB64s([]byte(finalContent))
 	if err != nil {
-		logs.Logger.Error().Err(err).Msg("Extract b64s error")
+		logs.Logger.Error().Err(err).Int("task_id", response.GetTaskID()).
+			Msg("Extract b64s error")
 	}
 	response.SetB64s(b64s)
 

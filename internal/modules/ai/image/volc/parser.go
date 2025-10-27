@@ -11,7 +11,7 @@ type JiMengParser struct {
 
 func NewJiMengParser() *JiMengParser {
 	return &JiMengParser{
-		GenericParser: image.NewGenericParser(&JiMengParserStrategy{}),
+		GenericParser: image.NewGenericParser(&JiMengParserStrategy{}, &image.GenericB64Strategy{}),
 	}
 }
 
