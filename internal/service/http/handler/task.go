@@ -263,21 +263,24 @@ func (h *TaskHandler) inputImageURLs() ([]string, error) {
 	return ret, nil
 }
 
-func (h *TaskHandler) createEditTask(form request.TaskForm) error {
+func (h *TaskHandler) createTask(form request.TaskForm) error {
 	now := time.Now()
 	taskRecord := model.Task{
 		TaskGroupId: form.GetGroupId(),
-		Type:        consts.TaskTypeEdit.String(),
+		Type:        form.GetTaskType(),
 		Prompt:      form.GetPrompt(),
-		Speed:       sql.NullString{Valid: true, String: form.GetSpeed().String()},
-		Status:      model.TaskStatusPending.String(),
+		Model:       form.GetModel(),
 		Quality:     form.GetQuality(),
 		Size:        form.GetSize(),
+		Status:      model.TaskStatusPending.String(),
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	if h.ctx.FullPath() == "/v2/task/slow/4oVip-four" {
+	if h.ctx.FullPath() == "/v2/task/generate/4oVip-four" {
 		taskRecord.Model = consts.GPT4oImageVip.String()
+	}
+	if form.GetSpeed() != "" {
+		taskRecord.Speed = sql.NullString{Valid: true, String: form.GetSpeed().String()}
 	}
 	err := mysql.DB.Model(&model.Task{}).Create(&taskRecord).Error
 	if err != nil {
@@ -312,79 +315,9 @@ func (h *TaskHandler) createEditTask(form request.TaskForm) error {
 	return nil
 }
 
-func (h *TaskHandler) createGenerateTask(form *request.Generate) error {
-	now := time.Now()
-	task := model.Task{
-		TaskGroupId: form.GroupId,
-		Type:        consts.TaskTypeGenerate.String(),
-		Prompt:      form.Prompt,
-		Status:      model.TaskStatusPending.String(),
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}
-	if h.ctx.FullPath() == "/v2/task/generate/4oVip-four" {
-		task.Model = consts.GPT4oImageVip.String()
-	}
-	err := mysql.DB.Model(&model.Task{}).Create(&task).Error
-	if err != nil {
-		return err
-	}
-	h.task = &task
-	return nil
-}
-
-func (h *TaskHandler) createTask(form *request.Create) error {
-	now := time.Now()
-	taskRecord := model.Task{
-		TaskGroupId: form.GroupId,
-		Type:        form.TaskType(),
-		Prompt:      form.Prompt,
-		Model:       form.Model,
-		Size:        form.Size,
-		Status:      model.TaskStatusPending.String(),
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}
-	err := mysql.DB.Model(&model.Task{}).Create(&taskRecord).Error
-	if err != nil {
-		return err
-	}
-	for _, ii := range form.ImageIds {
-		taskImageR := model.TaskImage{
-			ImageId: ii,
-			TaskId:  taskRecord.Id,
-			Type:    model.TaskImageTypeInput.String(),
-		}
-		if form.ImageType != "" {
-			taskImageR.Origin = sql.NullString{Valid: true, String: form.ImageType}
-		} else {
-			taskImageR.Origin = sql.NullString{Valid: false}
-		}
-		err = mysql.DB.Model(&model.TaskImage{}).Create(&taskImageR).Error
-		if err != nil {
-			return err
-		}
-	}
-	var task model.Task
-	err = mysql.DB.Model(&model.Task{}).
-		Preload("TaskImages").
-		Preload("TaskImages.InputImage").
-		Preload("TaskImages.OutputImage").
-		Where("id = ?", taskRecord.Id).First(&task).Error
-	if err != nil {
-		return err
-	}
-	h.task = &task
-	return nil
-}
-
 func (h *TaskHandler) createTaskRecord(form any) error {
 	if _, ok := form.(request.TaskForm); ok {
-		return h.createEditTask(form.(request.TaskForm))
-	} else if _, ok := form.(*request.Generate); ok {
-		return h.createGenerateTask(form.(*request.Generate))
-	} else if _, ok := form.(*request.Create); ok {
-		return h.createTask(form.(*request.Create))
+		return h.createTask(form.(request.TaskForm))
 	}
 	return fmt.Errorf("unknown task form type: %T", form)
 }

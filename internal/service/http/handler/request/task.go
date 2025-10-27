@@ -8,10 +8,12 @@ type TaskForm interface {
 	GetImageOrigin() string
 	GetGroupId() string
 	GetImageIds() []int
+	GetModel() string
 	GetPrompt() string
 	GetSpeed() consts.TaskSpeed
 	GetQuality() string
 	GetSize() string
+	GetTaskType() string
 }
 
 type SlowTask struct {
@@ -34,6 +36,9 @@ func (s *SlowTask) GetImageIds() []int {
 	}
 	return []int{s.ImageId}
 }
+func (s *SlowTask) GetModel() string {
+	return ""
+}
 func (s *SlowTask) GetPrompt() string {
 	return s.Prompt
 }
@@ -45,6 +50,12 @@ func (s *SlowTask) GetSize() string {
 }
 func (s *SlowTask) GetSpeed() consts.TaskSpeed {
 	return consts.SlowSpeed
+}
+func (s *SlowTask) GetTaskType() string {
+	if len(s.ImageIds) != 0 {
+		return consts.TaskTypeEdit.String()
+	}
+	return consts.TaskTypeGenerate.String()
 }
 
 type FastSpeed struct {
@@ -69,6 +80,9 @@ func (s *FastSpeed) GetImageIds() []int {
 	}
 	return []int{s.ImageId}
 }
+func (s *FastSpeed) GetModel() string {
+	return ""
+}
 func (s *FastSpeed) GetPrompt() string {
 	return s.Prompt
 }
@@ -81,10 +95,44 @@ func (s *FastSpeed) GetSize() string {
 func (s *FastSpeed) GetSpeed() consts.TaskSpeed {
 	return consts.FastSpeed
 }
+func (s *FastSpeed) GetTaskType() string {
+	if len(s.ImageIds) != 0 {
+		return consts.TaskTypeEdit.String()
+	}
+	return consts.TaskTypeGenerate.String()
+}
 
 type Generate struct {
 	GroupId string `form:"group_id"`
 	Prompt  string `form:"prompt"`
+}
+
+func (g *Generate) GetImageOrigin() string {
+	return ""
+}
+func (g *Generate) GetGroupId() string {
+	return g.GroupId
+}
+func (g *Generate) GetImageIds() []int {
+	return []int{}
+}
+func (g *Generate) GetModel() string {
+	return ""
+}
+func (g *Generate) GetPrompt() string {
+	return g.Prompt
+}
+func (g *Generate) GetQuality() string {
+	return ""
+}
+func (g *Generate) GetSize() string {
+	return ""
+}
+func (g *Generate) GetSpeed() consts.TaskSpeed {
+	return ""
+}
+func (g *Generate) GetTaskType() string {
+	return consts.TaskTypeGenerate.String()
 }
 
 type Create struct {
@@ -96,7 +144,34 @@ type Create struct {
 	Size      string `form:"size"`
 }
 
-func (c *Create) TaskType() string {
+func (c *Create) GetImageOrigin() string {
+	return c.ImageType
+}
+func (c *Create) GetGroupId() string {
+	return c.GroupId
+}
+func (c *Create) GetImageIds() []int {
+	if len(c.ImageIds) != 0 {
+		return c.ImageIds
+	}
+	return []int{}
+}
+func (c *Create) GetModel() string {
+	return c.Model
+}
+func (c *Create) GetPrompt() string {
+	return c.Prompt
+}
+func (c *Create) GetQuality() string {
+	return ""
+}
+func (c *Create) GetSize() string {
+	return c.Size
+}
+func (c *Create) GetSpeed() consts.TaskSpeed {
+	return ""
+}
+func (c *Create) GetTaskType() string {
 	if len(c.ImageIds) != 0 {
 		return consts.TaskTypeEdit.String()
 	}
