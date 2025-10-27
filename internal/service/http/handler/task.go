@@ -110,6 +110,7 @@ func (h *TaskHandler) edit(ctx context.Context) {
 	bs, err := h.inputImageBytes()
 	if err != nil {
 		h.fail(err)
+		h.wg.Done()
 		return
 	}
 	urls, _ := h.inputImageURLs()
@@ -161,6 +162,9 @@ func (h *TaskHandler) edit(ctx context.Context) {
 			TaskID: h.task.Id,
 		}
 		mj.NewProvider(ctx, []observer.Observer{h}).Create(req)
+	} else {
+		h.fail(fmt.Errorf("not support model: %s", h.task.Model))
+		h.wg.Done()
 	}
 }
 
@@ -169,7 +173,22 @@ func (h *TaskHandler) generate(ctx context.Context) {
 		Int("task_id", h.task.Id).
 		Str("model", h.task.Model).
 		Msg("Calling image supplier")
-	if strings.HasPrefix(h.task.Model, "gemini") {
+	if h.task.Speed.Valid && h.task.Speed.String == consts.SlowSpeed.String() {
+		editRequest := gpt.SlowRequest{
+			Prompt: h.task.Prompt,
+			Model:  h.task.Model,
+			TaskID: h.task.Id,
+		}
+		gpt.NewProvider(ctx, []observer.Observer{h}).SlowSpeed(editRequest)
+	} else if h.task.Speed.Valid && h.task.Speed.String == consts.FastSpeed.String() {
+		editRequest := gpt.FastRequest{
+			Prompt:  h.task.Prompt,
+			Quality: h.task.Quality,
+			Size:    h.task.Size,
+			TaskID:  h.task.Id,
+		}
+		gpt.NewProvider(ctx, []observer.Observer{h}).FastSpeed(editRequest)
+	} else if strings.HasPrefix(h.task.Model, "gemini") {
 		req := gemini.Request{
 			Prompt: h.task.Prompt,
 			Model:  h.task.Model,
@@ -190,12 +209,8 @@ func (h *TaskHandler) generate(ctx context.Context) {
 		}
 		mj.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else {
-		genRequest := gpt.SlowRequest{
-			Prompt: h.task.Prompt,
-			Model:  h.task.Model,
-			TaskID: h.task.Id, // 传递TaskID
-		}
-		gpt.NewProvider(ctx, []observer.Observer{h}).SlowSpeed(genRequest)
+		h.fail(fmt.Errorf("not support model: %s", h.task.Model))
+		h.wg.Done()
 	}
 }
 
@@ -276,7 +291,7 @@ func (h *TaskHandler) createTask(form request.TaskForm) error {
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	if h.ctx.FullPath() == "/v2/task/generate/4oVip-four" {
+	if h.ctx.FullPath() == "/v2/task/generate/4oVip-four" || h.ctx.FullPath() == "/v2/task/slow/4oVip-four" {
 		taskRecord.Model = consts.GPT4oImageVip.String()
 	}
 	if form.GetSpeed() != "" {

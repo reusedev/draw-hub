@@ -34,7 +34,10 @@ func (s *SlowTask) GetImageIds() []int {
 	if len(s.ImageIds) != 0 {
 		return s.ImageIds
 	}
-	return []int{s.ImageId}
+	if s.ImageId != 0 {
+		return []int{s.ImageId}
+	}
+	return []int{}
 }
 func (s *SlowTask) GetModel() string {
 	return ""
@@ -52,7 +55,7 @@ func (s *SlowTask) GetSpeed() consts.TaskSpeed {
 	return consts.SlowSpeed
 }
 func (s *SlowTask) GetTaskType() string {
-	if len(s.ImageIds) != 0 {
+	if len(s.ImageIds) != 0 || s.ImageId != 0 {
 		return consts.TaskTypeEdit.String()
 	}
 	return consts.TaskTypeGenerate.String()
@@ -78,7 +81,10 @@ func (s *FastSpeed) GetImageIds() []int {
 	if len(s.ImageIds) != 0 {
 		return s.ImageIds
 	}
-	return []int{s.ImageId}
+	if s.ImageId != 0 {
+		return []int{s.ImageId}
+	}
+	return []int{}
 }
 func (s *FastSpeed) GetModel() string {
 	return ""
@@ -96,7 +102,7 @@ func (s *FastSpeed) GetSpeed() consts.TaskSpeed {
 	return consts.FastSpeed
 }
 func (s *FastSpeed) GetTaskType() string {
-	if len(s.ImageIds) != 0 {
+	if len(s.ImageIds) != 0 || s.ImageId != 0 {
 		return consts.TaskTypeEdit.String()
 	}
 	return consts.TaskTypeGenerate.String()
@@ -129,7 +135,8 @@ func (g *Generate) GetSize() string {
 	return ""
 }
 func (g *Generate) GetSpeed() consts.TaskSpeed {
-	return ""
+	// use gpt-4o-image or gpt-4o-image-vip model
+	return consts.SlowSpeed
 }
 func (g *Generate) GetTaskType() string {
 	return consts.TaskTypeGenerate.String()
