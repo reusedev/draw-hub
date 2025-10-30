@@ -43,7 +43,7 @@ type TokenManager struct {
 	Client []*Client
 }
 
-// GTokenManager [classification(slow|fast|gemini-2.5-flash-image-hd)]TokenManager
+// GTokenManager [model(gpt-image-1|gemini-2.5-flash-image|...)]TokenManager
 var GTokenManager map[string]*TokenManager
 
 func InitTokenManager(ctx context.Context, cla []string, tokens [][][]TokenWithModel) error {
