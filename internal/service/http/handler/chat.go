@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/reusedev/draw-hub/internal/modules/ai/chat/grok"
+	"github.com/reusedev/draw-hub/internal/modules/ai/chat/common"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/request"
 	"github.com/reusedev/draw-hub/internal/service/http/handler/response"
@@ -22,7 +22,7 @@ func newHandler(req *request.ChatCompletion) *chatHandler {
 }
 
 func (c *chatHandler) chat() (*response.ChatCompletion, error) {
-	resp := grok.DeepSearch(c.request.ToChatCommonRequest())
+	resp := common.Chat(c.request.ToChatCommonRequest())
 	if len(resp) == 0 {
 		return nil, fmt.Errorf("no response found")
 	}
@@ -30,10 +30,10 @@ func (c *chatHandler) chat() (*response.ChatCompletion, error) {
 	for _, v := range resp {
 		m, err := v.Marsh()
 		if err != nil {
-			logs.Logger.Err(err).Msg("chat-DeepSearch")
+			logs.Logger.Err(err).Msg("chat")
 			continue
 		}
-		logs.Logger.Info().Str("Chat response: ", string(m)).Msg("chat-DeepSearch")
+		logs.Logger.Info().Str("Chat response: ", string(m)).Msg("chat")
 		if v.Succeed() {
 			ret := &response.ChatCompletion{}
 			err = json.Unmarshal([]byte(v.RawBody()), ret)

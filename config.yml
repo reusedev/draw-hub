@@ -144,6 +144,12 @@ request_order:
         supplier: "tuzi"
         desc: "default"
         model: "grok-3-deepsearch"
+  gpt-5:
+    -
+      -
+        supplier: "tuzi"
+        desc: "default"
+        model: "gpt-5"
   gemini-2.5-flash-image:
     -
       -
