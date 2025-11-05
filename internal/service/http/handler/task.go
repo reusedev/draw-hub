@@ -155,11 +155,13 @@ func (h *TaskHandler) edit(ctx context.Context) {
 	} else if h.task.Model == consts.MidJourney.String() {
 		prompt := h.task.Prompt
 		if !strings.Contains(prompt, "--sref") {
-			prompt += fmt.Sprintf(" --sref %s", strings.Join(urls, " "))
+			prompt = strings.TrimSpace(prompt) + fmt.Sprintf(" --sref %s", strings.Join(urls, " "))
 		}
 		req := mj.Request{
-			Prompt: prompt,
-			TaskID: h.task.Id,
+			ImageURLs:  urls,
+			ImageBytes: bs,
+			Prompt:     prompt,
+			TaskID:     h.task.Id,
 		}
 		mj.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else {
