@@ -17,9 +17,11 @@ func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
 			if ok {
 				wg.Add(1)
 				go func() {
-					task.Execute(ctx, wg)
+					task.Execute(ctx)
+					wg.Done()
 				}()
 			} else {
+				// channel close
 				wg.Done()
 				return
 			}

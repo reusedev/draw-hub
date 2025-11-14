@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +37,7 @@ type TaskHandler struct {
 	ctx           *gin.Context
 	task          *model.Task
 	imageResponse []image.Response
-	wg            *sync.WaitGroup
+	alreadyUpdate chan struct{}
 }
 
 func newTaskHandler(c *gin.Context) (*TaskHandler, error) {
@@ -84,9 +83,10 @@ func (h *TaskHandler) fail(err error) {
 		"status":        model.TaskStatusFailed.String(),
 		"failed_reason": "任务执行失败，请稍后重试",
 	})
+	h.alreadyUpdate <- struct{}{}
 }
 
-func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) {
+func (h *TaskHandler) Execute(ctx context.Context) {
 	// 记录任务开始执行日志
 	logs.Logger.Info().
 		Int("task_id", h.task.Id).
@@ -97,12 +97,19 @@ func (h *TaskHandler) Execute(ctx context.Context, wg *sync.WaitGroup) {
 	mysql.DB.Model(&model.Task{}).Where("id = ?", h.task.Id).Updates(map[string]interface{}{
 		"status": model.TaskStatusRunning.String(),
 	})
-	h.wg = wg
 	switch h.task.Type {
 	case consts.TaskTypeEdit.String():
 		h.edit(ctx)
 	case consts.TaskTypeGenerate.String():
 		h.generate(ctx)
+	}
+	timeout := time.NewTimer(5 * time.Second)
+	select {
+	case <-timeout.C:
+		logs.Logger.Info().Msg("Update timeout")
+		return
+	case <-h.alreadyUpdate:
+		return
 	}
 }
 
@@ -110,7 +117,6 @@ func (h *TaskHandler) edit(ctx context.Context) {
 	bs, err := h.inputImageBytes()
 	if err != nil {
 		h.fail(err)
-		h.wg.Done()
 		return
 	}
 	urls, _ := h.inputImageURLs()
@@ -166,7 +172,6 @@ func (h *TaskHandler) edit(ctx context.Context) {
 		mj.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else {
 		h.fail(fmt.Errorf("not support model: %s", h.task.Model))
-		h.wg.Done()
 	}
 }
 
@@ -212,7 +217,6 @@ func (h *TaskHandler) generate(ctx context.Context) {
 		mj.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else {
 		h.fail(fmt.Errorf("not support model: %s", h.task.Model))
-		h.wg.Done()
 	}
 }
 
@@ -520,7 +524,6 @@ func (h *TaskHandler) recordSupplierInvoke() error {
 }
 
 func (h *TaskHandler) Update(event int, data interface{}) {
-	defer h.wg.Done()
 	if event == consts.EventTaskEnd {
 		h.imageResponse = data.([]image.Response)
 		err := h.endWork()
@@ -534,6 +537,7 @@ func (h *TaskHandler) Update(event int, data interface{}) {
 			logs.Logger.Error().Err(err).Msg("Update task status error")
 		}
 	}
+	h.alreadyUpdate <- struct{}{}
 }
 
 func (h *TaskHandler) endWork() error {
