@@ -7,6 +7,7 @@ import (
 )
 
 var ImageTaskQueue = NewTaskQueue(100)
+var workers = make(chan struct{}, 15)
 var closeOnce sync.Once
 
 func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
@@ -15,13 +16,12 @@ func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
 		select {
 		case task, ok := <-ImageTaskQueue:
 			if ok {
-				wg.Add(1)
+				workers <- struct{}{}
 				go func() {
 					task.Execute(ctx)
-					wg.Done()
+					<-workers
 				}()
 			} else {
-				// channel close
 				wg.Done()
 				return
 			}
