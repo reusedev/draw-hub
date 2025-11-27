@@ -180,6 +180,21 @@ request_order:
         supplier: "geek"
         desc: "low_price"
         model: "gemini-nano-banana-hd"
+  nano-banana-2:
+    -
+      - supplier: "tuzi"
+        desc: "default"
+        model: "nano-banana-2"
+  nano-banana-2-2k:
+    -
+      - supplier: "tuzi"
+        desc: "default"
+        model: "nano-banana-2-2k"
+  nano-banana-2-4k:
+    -
+      - supplier: "tuzi"
+        desc: "default"
+        model: "nano-banana-2-4k"
   jimeng_t2i_v40:
     -
       -

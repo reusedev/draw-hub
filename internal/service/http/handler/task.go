@@ -141,7 +141,7 @@ func (h *TaskHandler) edit(ctx context.Context) {
 			TaskID:     h.task.Id,
 		}
 		gpt.NewProvider(ctx, []observer.Observer{h}).FastSpeed(editRequest)
-	} else if strings.HasPrefix(h.task.Model, "gemini") {
+	} else if strings.HasPrefix(h.task.Model, "gemini") || strings.HasPrefix(h.task.Model, "nano-banana") {
 		req := gemini.Request{
 			ImageBytes: bs,
 			Prompt:     h.task.Prompt,
@@ -195,7 +195,7 @@ func (h *TaskHandler) generate(ctx context.Context) {
 			TaskID:  h.task.Id,
 		}
 		gpt.NewProvider(ctx, []observer.Observer{h}).FastSpeed(editRequest)
-	} else if strings.HasPrefix(h.task.Model, "gemini") {
+	} else if strings.HasPrefix(h.task.Model, "gemini") || strings.HasPrefix(h.task.Model, "nano-banana") {
 		req := gemini.Request{
 			Prompt: h.task.Prompt,
 			Model:  h.task.Model,
