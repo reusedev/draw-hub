@@ -118,9 +118,9 @@ type RequestOrder struct {
 	GPT5            [][]Request `yaml:"gpt-5"`
 	Gemini25Flash   [][]Request `yaml:"gemini-2.5-flash-image"`
 	Gemini25FlashHD [][]Request `yaml:"gemini-2.5-flash-image-hd"`
-	NanoBanana2     [][]Request `yaml:"nano-banana-2"`
-	NanoBanana22k   [][]Request `yaml:"nano-banana-2-2k"`
-	NanoBanana24k   [][]Request `yaml:"nano-banana-2-4k"`
+	Gemini3Pro      [][]Request `yaml:"gemini-3-pro-image-preview"`
+	Gemini3Pro2k    [][]Request `yaml:"gemini-3-pro-image-preview-2k"`
+	Gemini3Pro4k    [][]Request `yaml:"gemini-3-pro-image-preview-4k"`
 	JiMengV40       [][]Request `yaml:"jimeng_t2i_v40"`
 	Midjourney      [][]Request `yaml:"midjourney"`
 }
