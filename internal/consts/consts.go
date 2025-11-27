@@ -37,6 +37,12 @@ const (
 	MidJourney      Model = "midjourney"
 )
 
+const (
+	GeekGemini3   Model = "gemini-3-pro-image-preview"
+	GeekGemini32k Model = "gemini-3-pro-image-preview-2k"
+	GeekGemini34k Model = "gemini-3-pro-image-preview-hd"
+)
+
 func (m Model) String() string {
 	return string(m)
 }
