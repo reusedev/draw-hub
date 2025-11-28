@@ -290,13 +290,13 @@ var (
 		consts.Geek.String() + consts.GPTImage1.String(): {
 			"Your request may contain content that is not allowed by our safety system. Please try change the prompt and image.": PromptError,
 		},
-		consts.Geek.String() + consts.GeekGemini3.String(): {
+		consts.Tuzi.String() + consts.TuziGemini3.String(): {
 			"your request has been blocked by Google Gemini (PROHIBITED_CONTENT): content is prohibited under official usage policies.": PromptError,
 		},
-		consts.Geek.String() + consts.GeekGemini32k.String(): {
+		consts.Tuzi.String() + consts.TuziGemini32k.String(): {
 			"your request has been blocked by Google Gemini (PROHIBITED_CONTENT): content is prohibited under official usage policies.": PromptError,
 		},
-		consts.Geek.String() + consts.GeekGemini34k.String(): {
+		consts.Tuzi.String() + consts.TuziGemini34k.String(): {
 			"your request has been blocked by Google Gemini (PROHIBITED_CONTENT): content is prohibited under official usage policies.": PromptError,
 		},
 	}
