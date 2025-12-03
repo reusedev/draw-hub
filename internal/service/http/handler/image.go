@@ -33,13 +33,21 @@ func NewStorageHandler() *StorageHandler {
 		cache: cache.ImageCacheManager(),
 	}
 }
-func (s *StorageHandler) InputImage() model.InputImage {
+func (s *StorageHandler) Image(fileType string) interface{} {
+	if fileType == "output" {
+		result := s.outputImage
+		if result.URL == "" {
+			result.URL = config.GConfig.LocalStorageDomain + "/" + strings.ReplaceAll(result.Path, string(filepath.Separator), "/")
+		}
+		return result
+	}
 	result := s.inputImage
 	if result.URL == "" {
 		result.URL = config.GConfig.LocalStorageDomain + "/" + strings.ReplaceAll(result.Path, string(filepath.Separator), "/")
 	}
 	return result
 }
+
 func (s *StorageHandler) OutputImage() model.OutputImage {
 	return s.outputImage
 }
@@ -52,12 +60,12 @@ func (s *StorageHandler) Upload(request request.UploadImage) error {
 		request.OnlineFileName = fName
 		request.OnlineFileContent = b
 	}
-	s.initInputImage(request)
+	s.initImage(request)
 	err := s.upload(request)
 	if err != nil {
 		return err
 	}
-	err = s.createInputImage()
+	err = s.createImage(request.FileType)
 	if err != nil {
 		return err
 	}
@@ -204,7 +212,7 @@ func (s *StorageHandler) getImageResponse(request request.GetImage) (response.Ge
 	return ret, nil
 }
 
-func (s *StorageHandler) initInputImage(request request.UploadImage) {
+func (s *StorageHandler) initImage(request request.UploadImage) {
 	now := time.Now()
 	var fName string
 	if request.File != nil {
@@ -212,13 +220,25 @@ func (s *StorageHandler) initInputImage(request request.UploadImage) {
 	} else if request.URL != "" {
 		fName = request.OnlineFileName
 	}
-	s.inputImage.TTL = request.TTL
-	s.inputImage.CreatedAt = now
-	s.inputImage.Path = s.localStoragePath(fName, now)
-	if config.GConfig.CloudStorageEnabled {
-		s.inputImage.Key = s.ossStorageKey(fName)
-		s.inputImage.ACL = request.ACL
-		s.inputImage.StorageSupplierName = config.GConfig.CloudStorageSupplier
+	if request.FileType == "output" {
+		s.outputImage.TTL = request.TTL
+		s.outputImage.CreatedAt = now
+		s.outputImage.Path = s.localOutputStoragePath(fName, now)
+		s.outputImage.Type = "normal"
+		if config.GConfig.CloudStorageEnabled {
+			s.outputImage.Key = s.ossStorageKey(fName)
+			s.outputImage.ACL = request.ACL
+			s.outputImage.StorageSupplierName = config.GConfig.CloudStorageSupplier
+		}
+	} else {
+		s.inputImage.TTL = request.TTL
+		s.inputImage.CreatedAt = now
+		s.inputImage.Path = s.localInputStoragePath(fName, now)
+		if config.GConfig.CloudStorageEnabled {
+			s.inputImage.Key = s.ossStorageKey(fName)
+			s.inputImage.ACL = request.ACL
+			s.inputImage.StorageSupplierName = config.GConfig.CloudStorageSupplier
+		}
 	}
 }
 
@@ -244,11 +264,16 @@ func (s *StorageHandler) uploadToOSS(request request.UploadImage) error {
 	if err != nil {
 		return err
 	}
-	s.inputImage.URL = ossObject.URL
+	if request.FileType == "output" {
+		s.outputImage.URL = ossObject.URL
+	} else {
+		s.inputImage.URL = ossObject.URL
+	}
 	return nil
 }
 func (s *StorageHandler) localSave(request request.UploadImage) error {
 	var file io.Reader
+	var absPath string
 	if request.File != nil {
 		f, err := request.File.Open()
 		if err != nil {
@@ -259,28 +284,45 @@ func (s *StorageHandler) localSave(request request.UploadImage) error {
 	} else if request.URL != "" {
 		file = bytes.NewReader(request.OnlineFileContent)
 	}
-	absPath := filepath.Join(config.GConfig.LocalStorageDirectory, s.inputImage.Path)
+	if request.FileType == "output" {
+		absPath = filepath.Join(config.GConfig.LocalStorageDirectory, s.outputImage.Path)
+	} else {
+		absPath = filepath.Join(config.GConfig.LocalStorageDirectory, s.inputImage.Path)
+	}
 	err := local.SaveFile(file, absPath)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func (s *StorageHandler) localStoragePath(filename string, t time.Time) string {
+func (s *StorageHandler) localInputStoragePath(filename string, t time.Time) string {
 	ext := filepath.Ext(filename)
 	path := filepath.Join("input", t.Format("20060102"), uuid.New().String()+ext)
 	return path
 }
+func (s *StorageHandler) localOutputStoragePath(filename string, t time.Time) string {
+	ext := filepath.Ext(filename)
+	path := filepath.Join("output", t.Format("20060102"), uuid.New().String()+ext)
+	return path
+}
+
 func (s *StorageHandler) ossStorageKey(filename string) string {
 	ext := filepath.Ext(filename)
 	key := config.GConfig.AliOss.Directory + uuid.New().String() + ext
 	return key
 }
 
-func (s *StorageHandler) createInputImage() error {
-	err := mysql.DB.Create(&s.inputImage).Error
-	if err != nil {
-		return err
+func (s *StorageHandler) createImage(fileType string) error {
+	if fileType == "output" {
+		err := mysql.DB.Create(&s.outputImage).Error
+		if err != nil {
+			return err
+		}
+	} else {
+		err := mysql.DB.Create(&s.inputImage).Error
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -300,11 +342,19 @@ func (s *StorageHandler) transformToOssUpload(request request.UploadImage) (ali.
 		fName = request.OnlineFileName
 	}
 	urlExpire, _ := time.ParseDuration(config.GConfig.URLExpires)
+	var key, acl string
+	if request.FileType == "output" {
+		key = s.outputImage.Key
+		acl = s.outputImage.ACL
+	} else {
+		key = s.inputImage.Key
+		acl = s.inputImage.ACL
+	}
 	ret := ali.UploadRequest{
-		Key:       s.inputImage.Key,
+		Key:       key,
 		Filename:  fName,
 		File:      file,
-		Acl:       s.inputImage.ACL,
+		Acl:       acl,
 		URLExpire: urlExpire,
 	}
 	return ret, nil
@@ -322,6 +372,7 @@ func UploadImage(c *gin.Context) {
 		return
 	}
 	req.FullWithDefault()
+	req.FileType = c.GetHeader("file_type")
 	handler := NewStorageHandler()
 	err = handler.Upload(req)
 	if err != nil {
@@ -329,7 +380,7 @@ func UploadImage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
-	c.JSON(http.StatusOK, response.SuccessWithData(handler.InputImage()))
+	c.JSON(http.StatusOK, response.SuccessWithData(handler.Image(req.FileType)))
 }
 
 func GetImage(c *gin.Context) {
