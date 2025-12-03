@@ -15,9 +15,11 @@ type UploadImage struct {
 
 	OnlineFileName    string `form:"-"`
 	OnlineFileContent []byte `form:"-"`
+	FileType          string `form:"-"`
 }
 
 const ExpireDefault = "168h" // 默认过期时间为 7 天
+const ACLDefault = "public-read"
 
 func (u *UploadImage) Valid() error {
 	if u.File == nil && u.URL == "" {
@@ -39,7 +41,7 @@ func (u *UploadImage) Valid() error {
 
 func (u *UploadImage) FullWithDefault() {
 	if u.ACL == "" {
-		u.ACL = "public-read"
+		u.ACL = ACLDefault
 	}
 	if u.Expire == "" {
 		u.Expire = ExpireDefault
