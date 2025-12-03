@@ -80,13 +80,18 @@ func (t *tuziUrlStrategy) ExtractURLs(body []byte) ([]string, error) {
 		ImageURLs []struct {
 			URL string `json:"url"`
 		} `json:"imageUrls"`
+		ImageURL string `json:"imageUrl"`
 	}
 	err := json.Unmarshal(body, &response)
 	if err != nil {
 		return nil, err
 	}
-	for _, url := range response.ImageURLs {
-		urls = append(urls, url.URL)
+	if len(response.ImageURLs) != 0 {
+		for _, url := range response.ImageURLs {
+			urls = append(urls, url.URL)
+		}
+	} else {
+		urls = append(urls, response.ImageURL)
 	}
 	return urls, nil
 }
