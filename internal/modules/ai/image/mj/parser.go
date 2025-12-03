@@ -90,7 +90,7 @@ func (t *tuziUrlStrategy) ExtractURLs(body []byte) ([]string, error) {
 		for _, url := range response.ImageURLs {
 			urls = append(urls, url.URL)
 		}
-	} else {
+	} else if len(response.ImageURL) != 0 {
 		urls = append(urls, response.ImageURL)
 	}
 	return urls, nil
