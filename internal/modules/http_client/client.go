@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 )
 
 type HttpClient struct {
@@ -32,7 +33,15 @@ func WithHeader(key, value string) RequestOption {
 
 func New() *HttpClient {
 	return &HttpClient{
-		HttpClient: http.DefaultClient,
+		HttpClient: &http.Client{
+			Timeout: 120 * time.Second, // 设置120秒超时,防止请求永久挂起
+		},
+	}
+}
+
+func NewWithTimeout(timeout time.Duration) *HttpClient {
+	return &HttpClient{
+		HttpClient: &http.Client{Timeout: timeout},
 	}
 }
 
