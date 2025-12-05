@@ -52,8 +52,8 @@ func getOnlineImage(url string) (bytes []byte, fName string, err error) {
 			return nil, "", fmt.Errorf("URL contains invalid control characters: %s", url)
 		}
 	}
-	// 对于 Midjourney CDN，使用 curl
-	if strings.HasPrefix(url, "https://cdn.midjourney.com") {
+	// 对于 Midjourney CDN 或 Gemini3，使用 curl
+	if strings.HasPrefix(url, "https://cdn.midjourney.com") || strings.HasPrefix(url, "https://googlebackendcdn.datas.systems") {
 		return downloadWithCurl(url)
 	}
 	client := http.Client{
