@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/disintegration/imaging"
 	"github.com/google/uuid"
-	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"io"
 	"net/http"
 	"os/exec"
@@ -66,7 +65,6 @@ func getOnlineImage(url string) (bytes []byte, fName string, err error) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		logs.Logger.Err(err).Msg("GetOnlineImage Error")
 		return
 	}
 	defer resp.Body.Close()
