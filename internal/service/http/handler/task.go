@@ -363,6 +363,7 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 	for _, v := range imageResp.GetURLs() {
 		b, _, err := tools.GetOnlineImage(v)
 		if err != nil {
+			logs.Logger.Err(err).Msg("GetOnlineImage Error")
 			return err
 		}
 		result = append(result, imageData{URL: v, Byte: b})
@@ -430,6 +431,7 @@ func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
 	for _, v := range imageResp.GetURLs() {
 		b, _, err := tools.GetOnlineImage(v)
 		if err != nil {
+			logs.Logger.Err(err).Msg("GetOnlineImage Error")
 			return err
 		}
 		result = append(result, imageData{URL: v, Byte: b})
