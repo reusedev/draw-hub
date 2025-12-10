@@ -90,12 +90,7 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 		}
 		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage4oParser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
-		response, err := requester.Do()
-		if err != nil {
-			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
-				Str("model", token.Model).Msg("GPT SlowSpeed request failed")
-			continue
-		}
+		response := requester.Do()
 		ret = append(ret, response)
 		if response.Succeed() {
 			urls := response.GetURLs()
@@ -170,17 +165,7 @@ func (p *Provider) FastSpeed(request FastRequest) {
 		}
 		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage1Parser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
-		response, err := requester.Do()
-		if err != nil {
-			logs.Logger.Error().
-				Err(err).
-				Int("task_id", request.TaskID).
-				Int("attempt", attemptCount).
-				Str("supplier", token.Supplier.String()).
-				Str("model", token.Model).
-				Msg("GPT FastSpeed request failed")
-			continue
-		}
+		response := requester.Do()
 		ret = append(ret, response)
 		if response.Succeed() {
 			logs.Logger.Info().

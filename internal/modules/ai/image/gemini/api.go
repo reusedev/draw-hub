@@ -84,12 +84,7 @@ func (p *Provider) Create(request Request) {
 		}
 		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, parser)
 		requester.SetTaskID(request.TaskID) // 设置TaskID
-		response, err := requester.Do()
-		if err != nil {
-			logs.Logger.Error().Err(err).Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
-				Str("token_desc", token.Desc).Str("model", token.Model).Msg("Gemini Create request failed")
-			continue
-		}
+		response := requester.Do()
 		ret = append(ret, response)
 		if response.Succeed() {
 			urls := response.GetURLs()

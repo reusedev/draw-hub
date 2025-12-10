@@ -129,7 +129,7 @@ func (p *Provider) create(request Request, token *ai.TokenWithModel) (image.Resp
 			&reqType,
 			parser{&geekGenerateURLStrategy{}},
 		)
-		return requester.Do()
+		return requester.Do(), nil
 	} else if token.Supplier == consts.V3 {
 		b64s := make([]string, 0)
 		if len(request.ImageBytes) != 0 {

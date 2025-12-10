@@ -306,6 +306,10 @@ func DetectError(response Response, body string) error {
 	if response.Succeed() {
 		return nil
 	}
+	// 请求阶段error
+	if response.GetError() != nil {
+		return nil
+	}
 	if errs, ok := errorMap[response.GetSupplier()+response.GetModel()]; ok {
 		for key, err := range errs {
 			if strings.Contains(body, key) {

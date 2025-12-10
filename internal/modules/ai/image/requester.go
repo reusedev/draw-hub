@@ -31,11 +31,15 @@ func (r *SyncRequester) SetTaskID(taskID int) *SyncRequester {
 	return r
 }
 
-func (r *SyncRequester) Do() (Response, error) {
+func (r *SyncRequester) Do() Response {
+	ret := r.Request.InitResponse(r.token.Supplier.String(), r.token.Desc)
+	ret.SetTaskID(r.TaskID)
+
 	client := http_client.New()
 	body, contentType, err := r.Request.BodyContentType(r.token.Supplier)
 	if err != nil {
-		return nil, err
+		ret.SetError(err)
+		return ret
 	}
 	req, err := client.NewRequest(
 		http.MethodPost,
@@ -45,13 +49,19 @@ func (r *SyncRequester) Do() (Response, error) {
 		http_client.WithBody(body),
 	)
 	if err != nil {
-		return nil, err
+		ret.SetError(err)
+		return ret
 	}
 	reqAt := time.Now()
 	resp, err := client.Do(req)
 	respAt := time.Now()
+	ret.SetReqAt(reqAt)
+	ret.SetRespAt(respAt)
+	ret.SetStartAt(reqAt)
+	ret.SetEndAt(respAt)
 	if err != nil {
-		return nil, err
+		ret.SetError(err)
+		return ret
 	}
 	defer resp.Body.Close()
 	logs.Logger.Info().
@@ -63,17 +73,12 @@ func (r *SyncRequester) Do() (Response, error) {
 		Int("status_code", resp.StatusCode).
 		Dur("req_consume_ms", respAt.Sub(reqAt)).
 		Msg("image request")
-	ret := r.Request.InitResponse(r.token.Supplier.String(), r.token.Desc)
-	ret.SetTaskID(r.TaskID)
-	ret.SetReqAt(reqAt)
-	ret.SetRespAt(respAt)
-	ret.SetStartAt(reqAt)
-	ret.SetEndAt(respAt)
 	err = r.Parser.Parse(resp, ret)
 	if err != nil {
-		return nil, err
+		ret.SetError(err)
+		return ret
 	}
-	return ret, nil
+	return ret
 }
 
 type AsyncRequester struct {
