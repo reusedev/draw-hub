@@ -91,7 +91,7 @@ func (p *Provider) Create(request Request) {
 		ret = append(ret, response)
 		if response.GetError() != nil {
 			if strings.Contains(response.GetError().Error(), "Client.Timeout") {
-				if retryCount < 2 {
+				if retryCount < 1 {
 					retryCount++
 					logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
 						Str("error", response.GetError().Error()).Int("retry_no", retryCount).
