@@ -182,19 +182,37 @@ request_order:
         model: "gemini-nano-banana-hd"
   gemini-3-pro-image-preview:
     -
-      - supplier: "tuzi"
+      -
+        supplier: "tuzi"
         desc: "default"
+        model: "gemini-3-pro-image-preview"
+    -
+      -
+        supplier: "geek"
+        desc: "low_price"
         model: "gemini-3-pro-image-preview"
   gemini-3-pro-image-preview-2k:
     -
-      - supplier: "tuzi"
+      -
+        supplier: "tuzi"
         desc: "default"
         model: "gemini-3-pro-image-preview-2k"
+    -
+      -
+        supplier: "geek"
+        desc: "low_price"
+        model: "gemini-3-pro-image-preview"
   gemini-3-pro-image-preview-4k:
     -
-      - supplier: "tuzi"
+      -
+        supplier: "tuzi"
         desc: "default"
         model: "gemini-3-pro-image-preview-4k"
+    -
+      -
+        supplier: "geek"
+        desc: "low_price"
+        model: "gemini-3-pro-image-preview"
   jimeng_t2i_v40:
     -
       -
@@ -217,10 +235,12 @@ request_order:
         desc: "mj"
         model: "midjourney"
     -
-      - supplier: "geek"
+      -
+        supplier: "geek"
         desc: "low_price"
         model: "midjourney"
     -
-      - supplier: "v3"
+      -
+        supplier: "v3"
         desc: "default"
         model: "midjourney"

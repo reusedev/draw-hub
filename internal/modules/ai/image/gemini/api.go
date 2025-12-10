@@ -68,9 +68,16 @@ func (p *Provider) Create(request Request) {
 			Prompt:     request.Prompt,
 			Model:      token.Model,
 		}
+		if token.Model == "gemini-3-pro-image-preview" && token.GetSupplier() == consts.Geek {
+			if request.Model == consts.TuziGemini3.String() {
+				content.GeekSize = "1K"
+			} else if request.Model == consts.TuziGemini32k.String() {
+				content.GeekSize = "2K"
+			}
+		}
 		var parser image.Parser[image.Response]
 		parser = NewFlashImageParser()
-		if token.Model == "gemini-nano-banana-hd" && token.GetSupplier().String() == consts.Geek.String() {
+		if token.Model == "gemini-nano-banana-hd" && token.GetSupplier() == consts.Geek {
 			parser = image.NewGenericParser(&image.OpenAIURLStrategy{}, &image.GenericB64Strategy{})
 		}
 		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, parser)

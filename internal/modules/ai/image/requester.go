@@ -7,7 +7,6 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/tools"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -33,9 +32,7 @@ func (r *SyncRequester) SetTaskID(taskID int) *SyncRequester {
 }
 
 func (r *SyncRequester) Do() (Response, error) {
-	retryTimes := 0
-retry:
-	client := http_client.NewWithTimeout(20 * time.Minute)
+	client := http_client.New()
 	body, contentType, err := r.Request.BodyContentType(r.token.Supplier)
 	if err != nil {
 		return nil, err
@@ -54,20 +51,6 @@ retry:
 	resp, err := client.Do(req)
 	respAt := time.Now()
 	if err != nil {
-		// tuzi 收到请求后，长时间未响应也未计费，导致任务一直running
-		if strings.Contains(err.Error(), "Client.Timeout") {
-			if retryTimes < 2 {
-				logs.Logger.Info().
-					Int("task_id", r.TaskID).
-					Str("supplier", r.token.Supplier.String()).
-					Str("token_desc", r.token.Desc).
-					Str("path", r.Request.Path(r.token.Supplier)).
-					Str("method", req.Method).
-					Msg("Client.Timeout retry")
-				retryTimes++
-				goto retry
-			}
-		}
 		return nil, err
 	}
 	defer resp.Body.Close()

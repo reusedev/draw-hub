@@ -13,6 +13,7 @@ type FlashImageRequest struct {
 	Model      string   `json:"model"`
 	ImageBytes [][]byte `json:"image_bytes"`
 	Prompt     string   `json:"prompt"`
+	GeekSize   string   `json:"geek_size"`
 }
 
 func (f *FlashImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
@@ -49,6 +50,11 @@ func (f *FlashImageRequest) BodyContentType(supplier consts.ModelSupplier) (io.R
 				"url": "data:image/png;base64," + imageByte,
 			},
 		})
+	}
+	if supplier == consts.Geek && f.Model == "gemini-3-pro-image-preview" {
+		body["image"] = map[string]interface{}{
+			"image_size": f.GeekSize,
+		}
 	}
 	data, err := json.Marshal(body)
 	if err != nil {
