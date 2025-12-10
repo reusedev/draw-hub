@@ -191,6 +191,11 @@ request_order:
         supplier: "geek"
         desc: "low_price"
         model: "gemini-3-pro-image-preview"
+    -
+      -
+        supplier: "v3"
+        desc: "default"
+        model: "nano-banana-pro"
   gemini-3-pro-image-preview-2k:
     -
       -
@@ -202,6 +207,11 @@ request_order:
         supplier: "geek"
         desc: "low_price"
         model: "gemini-3-pro-image-preview"
+    -
+      -
+        supplier: "v3"
+        desc: "default"
+        model: "nano-banana-pro-2k"
   gemini-3-pro-image-preview-4k:
     -
       -
@@ -213,6 +223,11 @@ request_order:
         supplier: "geek"
         desc: "low_price"
         model: "gemini-3-pro-image-preview"
+    -
+      -
+        supplier: "v3"
+        desc: "default"
+        model: "nano-banana-pro-4k"
   jimeng_t2i_v40:
     -
       -

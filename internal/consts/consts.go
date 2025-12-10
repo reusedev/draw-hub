@@ -38,9 +38,9 @@ const (
 )
 
 const (
-	TuziGemini3   Model = "gemini-3-pro-image-preview"
-	TuziGemini32k Model = "gemini-3-pro-image-preview-2k"
-	TuziGemini34k Model = "gemini-3-pro-image-preview-hd"
+	Gemini3   Model = "gemini-3-pro-image-preview"
+	Gemini32k Model = "gemini-3-pro-image-preview-2k"
+	Gemini34k Model = "gemini-3-pro-image-preview-4k"
 )
 
 func (m Model) String() string {

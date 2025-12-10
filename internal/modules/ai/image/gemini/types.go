@@ -69,11 +69,19 @@ func (f *FlashImageRequest) Path(supplier consts.ModelSupplier) string {
 	return "v1/chat/completions"
 }
 func (f *FlashImageRequest) InitResponse(supplier string, tokenDesc string) image.Response {
+	model := f.Model
+	if supplier == consts.Geek.String() && f.Model == consts.Gemini3.String() {
+		if f.GeekSize == "2K" {
+			model = consts.Gemini32k.String()
+		} else if f.GeekSize == "4K" {
+			model = consts.Gemini34k.String()
+		}
+	}
 	return &FlashImageResponse{
 		image.BaseResponse{
 			Supplier:  supplier,
 			TokenDesc: tokenDesc,
-			Model:     f.Model,
+			Model:     model,
 			URLs:      []string{},
 		},
 	}

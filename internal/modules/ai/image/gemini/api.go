@@ -69,10 +69,12 @@ func (p *Provider) Create(request Request) {
 			Model:      token.Model,
 		}
 		if token.Model == "gemini-3-pro-image-preview" && token.GetSupplier() == consts.Geek {
-			if request.Model == consts.TuziGemini3.String() {
+			if request.Model == consts.Gemini3.String() {
 				content.GeekSize = "1K"
-			} else if request.Model == consts.TuziGemini32k.String() {
+			} else if request.Model == consts.Gemini32k.String() {
 				content.GeekSize = "2K"
+			} else if request.Model == consts.Gemini34k.String() {
+				content.GeekSize = "4K"
 			}
 		}
 		var parser image.Parser[image.Response]
