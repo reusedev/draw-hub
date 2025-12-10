@@ -35,7 +35,7 @@ func (r *SyncRequester) Do() Response {
 	ret := r.Request.InitResponse(r.token.Supplier.String(), r.token.Desc)
 	ret.SetTaskID(r.TaskID)
 
-	client := http_client.NewWithTimeout(10 * time.Minute)
+	client := http_client.New()
 	body, contentType, err := r.Request.BodyContentType(r.token.Supplier)
 	if err != nil {
 		ret.SetError(err)
