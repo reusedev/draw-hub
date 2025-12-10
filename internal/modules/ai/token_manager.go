@@ -10,6 +10,7 @@ import (
 )
 
 type TokenWithModel struct {
+	Id int
 	Token
 	Model string // supplier model
 }

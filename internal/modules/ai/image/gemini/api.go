@@ -8,6 +8,7 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
+	"strings"
 	"sync"
 	"time"
 )
@@ -84,8 +85,21 @@ func (p *Provider) Create(request Request) {
 		}
 		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, parser)
 		requester.SetTaskID(request.TaskID) // 设置TaskID
+		var retryCount int
+	retry:
 		response := requester.Do()
 		ret = append(ret, response)
+		if response.GetError() != nil {
+			if strings.Contains(response.GetError().Error(), "Client.Timeout") {
+				if retryCount < 2 {
+					retryCount++
+					logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).
+						Str("error", response.GetError().Error()).Int("retry_no", retryCount).
+						Msg("Request error, retry")
+					goto retry
+				}
+			}
+		}
 		if response.Succeed() {
 			urls := response.GetURLs()
 			logs.Logger.Info().Int("task_id", request.TaskID).Str("supplier", token.Supplier.String()).

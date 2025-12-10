@@ -168,12 +168,14 @@ func (r *RequestOrder) Tokens() [][][]ai.TokenWithModel {
 			continue
 		}
 		var classificationTokens [][]ai.TokenWithModel
+		var id int
 		for j := 0; j < fieldValue.Len(); j++ {
 			tokenGroup := fieldValue.Index(j)
 			var tokens []ai.TokenWithModel
 			for k := 0; k < tokenGroup.Len(); k++ {
 				request := tokenGroup.Index(k).Interface().(Request)
 				token := ai.TokenWithModel{
+					Id: id,
 					Token: ai.Token{
 						Supplier: consts.ModelSupplier(request.Supplier),
 						Token:    getToken(request.Supplier, request.Desc),
@@ -181,6 +183,7 @@ func (r *RequestOrder) Tokens() [][][]ai.TokenWithModel {
 					},
 					Model: request.Model,
 				}
+				id++
 				tokens = append(tokens, token)
 			}
 			classificationTokens = append(classificationTokens, tokens)
