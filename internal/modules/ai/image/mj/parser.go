@@ -81,10 +81,15 @@ func (t *tuziUrlStrategy) ExtractURLs(body []byte) ([]string, error) {
 			URL string `json:"url"`
 		} `json:"imageUrls"`
 		ImageURL string `json:"imageUrl"`
+		Progress string `json:"progress"`
 	}
 	err := json.Unmarshal(body, &response)
 	if err != nil {
 		return nil, err
+	}
+	// tuzi好像有时非100%返回https://cdn.midjourney.com/0/0_0.png
+	if response.Progress != "100%" {
+		return nil, nil
 	}
 	if len(response.ImageURLs) != 0 {
 		for _, url := range response.ImageURLs {
