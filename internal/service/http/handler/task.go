@@ -339,40 +339,41 @@ func (h *TaskHandler) createTaskRecord(form any) error {
 	return fmt.Errorf("unknown task form type: %T", form)
 }
 
-func (h *TaskHandler) createImageRecords(imageResp image.Response) error {
-	err := h.createNormalRecords(imageResp)
-	if err != nil {
-		return err
-	}
-	err = h.createCompressionRecords(imageResp)
-	if err != nil {
-		return err
-	}
-	return nil
+type imageData struct {
+	URL  string `json:"url"`
+	Byte []byte `json:"byte"`
 }
-func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
-	type imageData struct {
-		URL  string `json:"url"`
-		Byte []byte `json:"byte"`
-	}
-	result := make([]imageData, 0)
+
+func (h *TaskHandler) createImageRecords(imageResp image.Response) error {
+	images := make([]imageData, 0)
 	for _, v := range imageResp.GetURLs() {
 		b, _, err := tools.GetOnlineImage(v)
 		if err != nil {
 			logs.Logger.Err(err).Msg("GetOnlineImage Error")
 			return err
 		}
-		result = append(result, imageData{URL: v, Byte: b})
+		images = append(images, imageData{URL: v, Byte: b})
 	}
 	for _, v := range imageResp.GetB64s() {
 		decoded, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
 			return err
 		}
-		result = append(result, imageData{URL: "", Byte: decoded})
+		images = append(images, imageData{URL: "", Byte: decoded})
 	}
 
-	for _, v := range result {
+	err := h.createNormalRecords(images, imageResp)
+	if err != nil {
+		return err
+	}
+	err = h.createCompressionRecords(images, imageResp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (h *TaskHandler) createNormalRecords(images []imageData, imageResp image.Response) error {
+	for _, v := range images {
 		path, err := saveNormalImage(v.Byte, h.task.CreatedAt, imageResp.GetSupplier())
 		if err != nil {
 			return err
@@ -418,29 +419,8 @@ func (h *TaskHandler) createNormalRecords(imageResp image.Response) error {
 	return nil
 }
 
-func (h *TaskHandler) createCompressionRecords(imageResp image.Response) error {
-	type imageData struct {
-		URL  string `json:"url"`
-		Byte []byte `json:"byte"`
-	}
-	result := make([]imageData, 0)
-	for _, v := range imageResp.GetURLs() {
-		b, _, err := tools.GetOnlineImage(v)
-		if err != nil {
-			logs.Logger.Err(err).Msg("GetOnlineImage Error")
-			return err
-		}
-		result = append(result, imageData{URL: v, Byte: b})
-	}
-	for _, v := range imageResp.GetB64s() {
-		decoded, err := base64.StdEncoding.DecodeString(v)
-		if err != nil {
-			return err
-		}
-		result = append(result, imageData{URL: "", Byte: decoded})
-	}
-
-	for _, v := range result {
+func (h *TaskHandler) createCompressionRecords(images []imageData, imageResp image.Response) error {
+	for _, v := range images {
 		path, ratio, err := saveCompressionImage(v.Byte, 95, h.task.CreatedAt, imageResp.GetSupplier())
 		if err != nil {
 			return err
