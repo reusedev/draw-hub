@@ -53,7 +53,9 @@ func getOnlineImage(url string) (bytes []byte, fName string, err error) {
 		}
 	}
 	// 对于 Midjourney CDN 或 Gemini3，使用 curl
-	if strings.HasPrefix(url, "https://cdn.midjourney.com") || strings.HasPrefix(url, "https://googlebackendcdn.datas.systems") {
+	if strings.HasPrefix(url, "https://cdn.midjourney.com") ||
+		strings.HasPrefix(url, "https://googlebackendcdn.datas.systems") ||
+		strings.HasPrefix(url, "https://googlecdn.datas.systems") {
 		return downloadWithCurl(url)
 	}
 	client := http.Client{
