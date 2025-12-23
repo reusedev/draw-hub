@@ -51,6 +51,7 @@ func (t *Task) TidyImage() {
 					Id:                  inputImage.Id,
 					Path:                inputImage.Path,
 					StorageSupplierName: inputImage.StorageSupplierName,
+					Bucket:              inputImage.Bucket,
 					Key:                 inputImage.Key,
 					ACL:                 inputImage.ACL,
 					TTL:                 inputImage.TTL,

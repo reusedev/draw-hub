@@ -221,12 +221,14 @@ func (h *TaskHandler) inputImageBytes() (ret [][]byte, err error) {
 		if img.Type != model.TaskImageTypeInput.String() {
 			continue
 		}
-		var path, key string
+		var path, bucket, key string
 		if img.Origin.String == model.TaskImageOriginOutput.String() {
 			path = img.OutputImage.Path
+			bucket = img.OutputImage.Bucket
 			key = img.OutputImage.Key
 		} else {
 			path = img.InputImage.Path
+			bucket = img.InputImage.Bucket
 			key = img.InputImage.Key
 		}
 		b, err := tools.ReadFile(filepath.Join(config.GConfig.LocalStorageDirectory, path))
@@ -240,7 +242,12 @@ func (h *TaskHandler) inputImageBytes() (ret [][]byte, err error) {
 		if !config.GConfig.CloudStorageEnabled {
 			return nil, fmt.Errorf("cloud storage is not enabled, cannot get input image bytes")
 		}
-		url, err := ali.OssClient.URL(key, time.Hour)
+		var url string
+		if strings.HasSuffix(bucket, "sg") {
+			url, err = ali.OssSgClient.URL(key, time.Hour)
+		} else {
+			url, err = ali.OssClient.URL(key, time.Hour)
+		}
 		if err != nil {
 			logs.Logger.Err(err).Msg("Get-OSS-URL")
 			return nil, err
@@ -261,16 +268,24 @@ func (h *TaskHandler) inputImageURLs() ([]string, error) {
 		if img.Type != model.TaskImageTypeInput.String() {
 			continue
 		}
-		var key string
+		var bucket, key string
 		if img.Origin.String == model.TaskImageOriginOutput.String() {
+			bucket = img.OutputImage.Bucket
 			key = img.OutputImage.Key
 		} else {
+			bucket = img.InputImage.Bucket
 			key = img.InputImage.Key
 		}
 		if !config.GConfig.CloudStorageEnabled {
 			return nil, fmt.Errorf("cloud storage is not enabled, cannot get input image bytes")
 		}
-		url, err := ali.OssClient.URL(key, time.Hour)
+		var url string
+		var err error
+		if strings.HasSuffix(bucket, "sg") {
+			url, err = ali.OssSgClient.URL(key, time.Hour)
+		} else {
+			url, err = ali.OssClient.URL(key, time.Hour)
+		}
 		if err != nil {
 			logs.Logger.Err(err).Msg("Get-OSS-URL")
 			return nil, err
@@ -397,6 +412,7 @@ func (h *TaskHandler) createNormalRecords(images []imageData, imageResp image.Re
 				return err
 			}
 			imageRecord.StorageSupplierName = config.GConfig.CloudStorageSupplier
+			imageRecord.Bucket = ali.OssClient.GetBucket()
 			imageRecord.Key = normal.Key
 			imageRecord.ACL = "private"
 			imageRecord.URL = normal.URL
@@ -445,6 +461,7 @@ func (h *TaskHandler) createCompressionRecords(images []imageData, imageResp ima
 				return err
 			}
 			imageRecord.StorageSupplierName = config.GConfig.CloudStorageSupplier
+			imageRecord.Bucket = ali.OssClient.GetBucket()
 			imageRecord.Key = compression.Key
 			imageRecord.ACL = "private"
 			imageRecord.URL = compression.URL

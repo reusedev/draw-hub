@@ -44,6 +44,7 @@ type Config struct {
 	CloudStorageSupplier  string `yaml:"cloud_storage_supplier"`
 	URLExpires            string `yaml:"url_expires"`
 	AliOss                `yaml:"ali_oss"`
+	AliOssSg              AliOss `yaml:"ali_oss_sg"`
 	MySQL                 `yaml:"mysql"`
 	Token                 []Token `yaml:"token"`
 	RequestOrder          `yaml:"request_order"`

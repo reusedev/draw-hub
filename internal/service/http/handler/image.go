@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/reusedev/draw-hub/config"
@@ -163,17 +164,25 @@ func (s *StorageHandler) selectImage(request request.GetImage) error {
 }
 func (s *StorageHandler) getImageResponse(request request.GetImage) (response.GetImage, error) {
 	var ret response.GetImage
-	var key, acl, url string
+	var bucket, key, acl, url string
 	if request.Type == "input" {
 		ret.Path = s.inputImage.Path
+		bucket = s.inputImage.Bucket
 		key = s.inputImage.Key
 		acl = s.inputImage.ACL
 		url = s.inputImage.URL
 	} else {
 		ret.Path = s.outputImage.Path
+		bucket = s.outputImage.Bucket
 		key = s.outputImage.Key
 		acl = s.outputImage.ACL
 		url = s.outputImage.URL
+	}
+	var ossClient *ali.OSSClient
+	if strings.HasSuffix(bucket, "sg") {
+		ossClient = ali.OssSgClient
+	} else {
+		ossClient = ali.OssClient
 	}
 	if !request.ThumbNail && request.Type == "output" && strings.HasSuffix(s.outputImage.ModelSupplierURL, ".png") && s.outputImage.Type == model.OuputImageTypeNormal.String() {
 		ret.URL = s.outputImage.ModelSupplierURL
@@ -182,7 +191,7 @@ func (s *StorageHandler) getImageResponse(request request.GetImage) (response.Ge
 	if config.GConfig.CloudStorageEnabled && key != "" {
 		if request.ThumbNail {
 			d, _ := time.ParseDuration(config.GConfig.URLExpires)
-			ossURL, err := ali.OssClient.Resize50(key, d)
+			ossURL, err := ossClient.Resize50(key, d)
 			if err != nil {
 				return ret, err
 			}
@@ -191,7 +200,7 @@ func (s *StorageHandler) getImageResponse(request request.GetImage) (response.Ge
 		}
 		if acl == "private" {
 			d, _ := time.ParseDuration(config.GConfig.URLExpires)
-			ossURL, err := ali.OssClient.URL(key, d)
+			ossURL, err := ossClient.URL(key, d)
 			if err != nil {
 				return ret, err
 			}
@@ -260,14 +269,24 @@ func (s *StorageHandler) uploadToOSS(request request.UploadImage) error {
 	if err != nil {
 		return err
 	}
-	ossObject, err := ali.OssClient.UploadFile(&ossReq)
+	var ossObject ali.OSSObject
+	var bucket string
+	if request.Transfer {
+		ossObject, err = ali.OssSgClient.UploadFile(&ossReq)
+		bucket = ali.OssSgClient.GetBucket()
+	} else {
+		ossObject, err = ali.OssClient.UploadFile(&ossReq)
+		bucket = ali.OssClient.GetBucket()
+	}
 	if err != nil {
 		return err
 	}
 	if request.FileType == "output" {
 		s.outputImage.URL = ossObject.URL
+		s.outputImage.Bucket = bucket
 	} else {
 		s.inputImage.URL = ossObject.URL
+		s.inputImage.Bucket = bucket
 	}
 	return nil
 }
@@ -424,4 +443,73 @@ func DeleteImage(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(nil))
+}
+
+// TransferImage 将北京bucket图片转存至新加坡bucket
+func TransferImage(c *gin.Context) {
+	var req request.TransferImage
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	err := req.Valid()
+	if req.Type == "" {
+		req.Type = "output"
+	}
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	uploadReq, err := transform2UploadRequest(req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.ParamErrorWithMessage(err.Error()))
+		return
+	}
+	handler := NewStorageHandler()
+	err = handler.Upload(*uploadReq)
+	if err != nil {
+		logs.Logger.Err(err).Msg("Image-Transfer")
+		c.JSON(http.StatusInternalServerError, response.InternalError)
+		return
+	}
+	c.JSON(http.StatusOK, response.SuccessWithData(handler.Image(req.Type)))
+}
+
+func transform2UploadRequest(req request.TransferImage) (*request.UploadImage, error) {
+	result := request.UploadImage{}
+	var bucket, key string
+	if req.Type == "input" {
+		inputImage := model.InputImage{}
+		err := mysql.DB.Model(&model.InputImage{}).Where("id = ?", req.ID).First(&inputImage).Error
+		if err != nil {
+			return nil, err
+		}
+		bucket = inputImage.Bucket
+		key = inputImage.Key
+		result.FileType = "input"
+		result.ACL = inputImage.ACL
+		result.TTL = inputImage.TTL
+	} else if req.Type == "output" {
+		outputImage := model.OutputImage{}
+		err := mysql.DB.Model(&model.OutputImage{}).Where("id = ?", req.ID).First(&outputImage).Error
+		if err != nil {
+			return nil, err
+		}
+		bucket = outputImage.Bucket
+		key = outputImage.Key
+		result.FileType = "output"
+		result.ACL = outputImage.ACL
+		result.TTL = outputImage.TTL
+	}
+	if !strings.HasSuffix(bucket, "bj") {
+		return nil, fmt.Errorf("image doesn't storaged in bj bucket")
+	}
+	url, err := ali.OssClient.URL(key, time.Hour)
+	if err != nil {
+		return nil, err
+	}
+	result.URL = url
+	result.Expire = request.ExpireDefault
+	result.Transfer = true
+	return &result, nil
 }

@@ -9,6 +9,7 @@ type InputImage struct {
 	Id                  int       `json:"id" gorm:"primaryKey"`
 	Path                string    `json:"path" gorm:"column:path;type:varchar(255)"`
 	StorageSupplierName string    `json:"storage_supplier_name" gorm:"column:storage_supplier_name;type:varchar(20)"`
+	Bucket              string    `json:"bucket" gorm:"column:bucket;type:varchar(100)"`
 	Key                 string    `json:"key" gorm:"column:key;type:varchar(100)"`
 	ACL                 string    `json:"acl" gorm:"column:acl;type:varchar(20)"`
 	TTL                 int       `json:"ttl" gorm:"column:ttl;type:int;default:0"` // Time to live in days
@@ -25,6 +26,7 @@ type OutputImage struct {
 	Path                string          `json:"path" gorm:"column:path;type:varchar(255)"`
 	ThumbNailPath       string          `json:"thumbnail_path" gorm:"column:thumbnail_path;type:varchar(255)"` // Path to the thumbnail image
 	StorageSupplierName string          `json:"storage_supplier_name" gorm:"column:storage_supplier_name;type:varchar(20)"`
+	Bucket              string          `json:"bucket" gorm:"column:bucket;type:varchar(100)"`
 	Key                 string          `json:"key" gorm:"column:key;type:varchar(100)"`
 	ACL                 string          `json:"acl" gorm:"column:acl;type:varchar(20)"`
 	TTL                 int             `json:"ttl" gorm:"column:ttl;type:int;default:0"` // Time to live in days

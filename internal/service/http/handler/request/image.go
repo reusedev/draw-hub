@@ -16,6 +16,7 @@ type UploadImage struct {
 	OnlineFileName    string `form:"-"`
 	OnlineFileContent []byte `form:"-"`
 	FileType          string `form:"-"`
+	Transfer          bool   `form:"-"` // 是否为转存接口请求
 }
 
 const ExpireDefault = "168h" // 默认过期时间为 7 天
@@ -92,5 +93,14 @@ func (d *DeleteImage) Valid() error {
 	if d.Type != "input" && d.Type != "output" {
 		return fmt.Errorf("invalid type: %s, must be 'input' or 'output'", d.Type)
 	}
+	return nil
+}
+
+type TransferImage struct {
+	ID   int    `form:"id"`   // 图片 ID
+	Type string `form:"type"` // 图片类型，input 或 output
+}
+
+func (d *TransferImage) Valid() error {
 	return nil
 }

@@ -16,10 +16,11 @@ import (
 )
 
 var (
-	OssClient *ossClient
+	OssClient   *OSSClient
+	OssSgClient *OSSClient
 )
 
-type ossClient struct {
+type OSSClient struct {
 	client     *oss.Client
 	endpoint   string
 	bucketName string
@@ -48,7 +49,7 @@ func InitOSS(config config.AliOss) {
 	if client == nil {
 		panic("create oss client failed")
 	}
-	OssClient = &ossClient{
+	OssClient = &OSSClient{
 		client:     client,
 		endpoint:   config.Endpoint,
 		bucketName: config.Bucket,
@@ -56,7 +57,28 @@ func InitOSS(config config.AliOss) {
 	}
 }
 
-func (o *ossClient) validACL(acl string) bool {
+func InitOSSSg(config config.AliOss) {
+	credential := credentials.NewStaticCredentialsProvider(config.AccessKeyId, config.AccessKeySecret, "")
+	cfg := oss.LoadDefaultConfig().
+		WithCredentialsProvider(credential).
+		WithEndpoint(config.Endpoint).WithRegion(config.Region)
+	client := oss.NewClient(cfg)
+	if client == nil {
+		panic("create oss client failed")
+	}
+	OssSgClient = &OSSClient{
+		client:     client,
+		endpoint:   config.Endpoint,
+		bucketName: config.Bucket,
+		directory:  config.Directory,
+	}
+}
+
+func (o *OSSClient) GetBucket() string {
+	return o.bucketName
+}
+
+func (o *OSSClient) validACL(acl string) bool {
 	if oss.ObjectACLType(acl) != oss.ObjectACLPrivate &&
 		oss.ObjectACLType(acl) != oss.ObjectACLPublicRead {
 		return false
@@ -64,7 +86,7 @@ func (o *ossClient) validACL(acl string) bool {
 	return true
 }
 
-func (o *ossClient) UploadFile(request *UploadRequest) (OSSObject, error) {
+func (o *OSSClient) UploadFile(request *UploadRequest) (OSSObject, error) {
 	ret := OSSObject{}
 	var key string
 	if request.Key != "" {
@@ -96,13 +118,13 @@ func (o *ossClient) UploadFile(request *UploadRequest) (OSSObject, error) {
 	return ret, nil
 }
 
-func (o *ossClient) UploadPrivateImage(b []byte) (string, error) {
+func (o *OSSClient) UploadPrivateImage(b []byte) (string, error) {
 	fName := uuid.New().String() + "." + tools.DetectImageType(b).String()
 	key := o.fullPath(fName)
 	return key, o.upload(fName, key, string(oss.ObjectACLPrivate), bytes.NewReader(b))
 }
 
-func (o *ossClient) URL(key string, expire time.Duration) (string, error) {
+func (o *OSSClient) URL(key string, expire time.Duration) (string, error) {
 	presignResult, err := o.Presign(key, expire)
 	if err != nil {
 		return "", err
@@ -110,11 +132,11 @@ func (o *ossClient) URL(key string, expire time.Duration) (string, error) {
 	return presignResult.URL, nil
 }
 
-func (o *ossClient) fullPath(fName string) string {
+func (o *OSSClient) fullPath(fName string) string {
 	return o.directory + fName
 }
 
-func (o *ossClient) Presign(key string, expire time.Duration) (*oss.PresignResult, error) {
+func (o *OSSClient) Presign(key string, expire time.Duration) (*oss.PresignResult, error) {
 	request := &oss.GetObjectRequest{
 		Bucket: oss.Ptr(o.bucketName),
 		Key:    oss.Ptr(key),
@@ -122,7 +144,7 @@ func (o *ossClient) Presign(key string, expire time.Duration) (*oss.PresignResul
 	return o.client.Presign(context.TODO(), request, oss.PresignExpires(expire))
 }
 
-func (o *ossClient) Resize50(key string, expire time.Duration) (*oss.PresignResult, error) {
+func (o *OSSClient) Resize50(key string, expire time.Duration) (*oss.PresignResult, error) {
 	request := &oss.GetObjectRequest{
 		Bucket:  oss.Ptr(o.bucketName),
 		Key:     oss.Ptr(key),
@@ -131,7 +153,7 @@ func (o *ossClient) Resize50(key string, expire time.Duration) (*oss.PresignResu
 	return o.client.Presign(context.TODO(), request, oss.PresignExpires(expire))
 }
 
-func (o *ossClient) upload(fName, key, acl string, reader io.Reader) error {
+func (o *OSSClient) upload(fName, key, acl string, reader io.Reader) error {
 	request := &oss.PutObjectRequest{
 		Bucket:             oss.Ptr(o.bucketName),
 		Acl:                oss.ObjectACLType(acl),
@@ -146,7 +168,7 @@ func (o *ossClient) upload(fName, key, acl string, reader io.Reader) error {
 	return nil
 }
 
-func (o *ossClient) Delete(key string) error {
+func (o *OSSClient) Delete(key string) error {
 	request := &oss.DeleteObjectRequest{
 		Bucket: oss.Ptr(o.bucketName),
 		Key:    oss.Ptr(key),

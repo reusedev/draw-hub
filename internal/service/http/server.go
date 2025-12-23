@@ -66,5 +66,6 @@ func initRouter(e *gin.Engine) {
 		file.POST("", handler.UploadImage)
 		file.GET("", handler.GetImage)
 		file.DELETE("", handler.DeleteImage)
+		file.POST("/transfer", handler.TransferImage)
 	}
 }
