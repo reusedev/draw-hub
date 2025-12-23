@@ -104,13 +104,14 @@ func (s *StorageHandler) Query(req request.GetImage) (response.GetImage, error) 
 }
 
 func (s *StorageHandler) Delete(request request.DeleteImage) error {
-	var localPath, TNLocalPath, cloudPath string
+	var localPath, TNLocalPath, bucket, cloudPath string
 	if request.Type == "input" {
 		inputImage, err := dao.InputImageById(request.ID)
 		if err != nil {
 			return err
 		}
 		localPath = inputImage.Path
+		bucket = inputImage.Bucket
 		cloudPath = inputImage.Key
 	} else if request.Type == "output" {
 		outputImage, err := dao.OutputImageById(request.ID)
@@ -119,6 +120,7 @@ func (s *StorageHandler) Delete(request request.DeleteImage) error {
 		}
 		localPath = outputImage.Path
 		TNLocalPath = outputImage.ThumbNailPath
+		bucket = outputImage.Bucket
 		cloudPath = outputImage.Key
 	}
 	if localPath != "" {
@@ -130,7 +132,12 @@ func (s *StorageHandler) Delete(request request.DeleteImage) error {
 		local.DeleteFile(p)
 	}
 	if cloudPath != "" && config.GConfig.CloudStorageEnabled {
-		err := ali.OssClient.Delete(cloudPath)
+		var err error
+		if strings.HasSuffix(bucket, "sg") {
+			err = ali.OssSgClient.Delete(cloudPath)
+		} else {
+			err = ali.OssClient.Delete(cloudPath)
+		}
 		if err != nil {
 			return err
 		}
