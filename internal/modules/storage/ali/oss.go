@@ -138,17 +138,19 @@ func (o *OSSClient) fullPath(fName string) string {
 
 func (o *OSSClient) Presign(key string, expire time.Duration) (*oss.PresignResult, error) {
 	request := &oss.GetObjectRequest{
-		Bucket: oss.Ptr(o.bucketName),
-		Key:    oss.Ptr(key),
+		Bucket:                     oss.Ptr(o.bucketName),
+		Key:                        oss.Ptr(key),
+		ResponseContentDisposition: oss.Ptr("inline"),
 	}
 	return o.client.Presign(context.TODO(), request, oss.PresignExpires(expire))
 }
 
 func (o *OSSClient) Resize50(key string, expire time.Duration) (*oss.PresignResult, error) {
 	request := &oss.GetObjectRequest{
-		Bucket:  oss.Ptr(o.bucketName),
-		Key:     oss.Ptr(key),
-		Process: oss.Ptr("image/resize,p_50"),
+		Bucket:                     oss.Ptr(o.bucketName),
+		Key:                        oss.Ptr(key),
+		Process:                    oss.Ptr("image/resize,p_50"),
+		ResponseContentDisposition: oss.Ptr("inline"),
 	}
 	return o.client.Presign(context.TODO(), request, oss.PresignExpires(expire))
 }
