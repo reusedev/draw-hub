@@ -12,10 +12,10 @@ import (
 )
 
 type chatHandler struct {
-	request *request.ChatCompletion
+	request request.ChatRequest
 }
 
-func newHandler(req *request.ChatCompletion) *chatHandler {
+func newHandler(req request.ChatRequest) *chatHandler {
 	return &chatHandler{
 		request: req,
 	}
@@ -50,6 +50,24 @@ func ChatCompletions(c *gin.Context) {
 	req := &request.ChatCompletion{}
 	err := c.ShouldBindJSON(req)
 	if err != nil {
+		c.JSON(http.StatusBadRequest, response.ParamError)
+		return
+	}
+	handler := newHandler(req)
+	resp, err := handler.chat()
+	if err != nil {
+		logs.Logger.Err(err).Msg("chat-ChatCompletions")
+		c.JSON(http.StatusInternalServerError, response.InternalError)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func ChatCompletionsV2(c *gin.Context) {
+	req := &request.ChatCompletionV2{}
+	err := c.ShouldBindJSON(req)
+	if err != nil {
+		fmt.Println(err.Error())
 		c.JSON(http.StatusBadRequest, response.ParamError)
 		return
 	}

@@ -60,6 +60,10 @@ func initRouter(e *gin.Engine) {
 	{
 		chat.POST("/completions", handler.ChatCompletions)
 	}
+	chatV2 := v2.Group("/chat")
+	{
+		chatV2.POST("/completions", handler.ChatCompletionsV2)
+	}
 
 	file := v1.Group("/images")
 	{
