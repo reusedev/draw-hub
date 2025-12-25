@@ -35,8 +35,8 @@ func (r *SyncRequester) Do() Response {
 	ret := r.Request.InitResponse(r.token.Supplier.String(), r.token.Desc)
 	ret.SetTaskID(r.TaskID)
 
-	// 不设置会2分钟超时，超时断开有时仍计费。延长为4分钟
-	client := http_client.NewWithTimeout(4 * time.Minute)
+	// 不设置会2分钟超时，超时断开有时仍计费。延长为10分钟
+	client := http_client.NewWithTimeout(10 * time.Minute)
 	body, contentType, err := r.Request.BodyContentType(r.token.Supplier)
 	if err != nil {
 		ret.SetError(err)
