@@ -5,14 +5,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
-	"strconv"
-	"sync"
-	"time"
 )
 
 type Provider struct {
@@ -60,6 +61,11 @@ func (p *Provider) Create(request Request) {
 	ret := make([]image.Response, 0)
 	getToken := ai.GTokenManager[consts.MidJourney.String()].GetTokenIterator()
 	for {
+		select {
+		case <-p.Ctx.Done():
+			return
+		default:
+		}
 		token := getToken()
 		if token == nil {
 			break
@@ -108,6 +114,7 @@ func (p *Provider) create(request Request, token *ai.TokenWithModel) (image.Resp
 		}
 		pollingContent := FetchRequest{}
 		requester := image.NewAsyncRequester(
+			p.Ctx,
 			token.Token,
 			&content,
 			image.NewSubmitParser(&providerTaskIDStrategy{}),
@@ -125,10 +132,12 @@ func (p *Provider) create(request Request, token *ai.TokenWithModel) (image.Resp
 			Image:  request.ImageURLs,
 		}
 		requester := image.NewRequester(
+			p.Ctx,
 			token.Token,
 			&reqType,
 			parser{&geekGenerateURLStrategy{}},
 		)
+		requester.SetTaskID(request.TaskID)
 		return requester.Do(), nil
 	} else if token.Supplier == consts.V3 {
 		b64s := make([]string, 0)
@@ -143,6 +152,7 @@ func (p *Provider) create(request Request, token *ai.TokenWithModel) (image.Resp
 		}
 		pollingContent := FetchRequest{}
 		requester := image.NewAsyncRequester(
+			p.Ctx,
 			token.Token,
 			reqType,
 			image.NewSubmitParser(&providerTaskIDStrategy{}),
@@ -152,6 +162,7 @@ func (p *Provider) create(request Request, token *ai.TokenWithModel) (image.Resp
 				pollingContent.ID = strconv.FormatInt(response.GetProviderTaskID(), 10)
 			},
 		)
+		requester.SetTaskID(request.TaskID)
 		return requester.Do()
 	}
 	return nil, fmt.Errorf("not support supplier: %s", token.Supplier)

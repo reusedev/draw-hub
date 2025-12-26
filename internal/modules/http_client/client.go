@@ -2,6 +2,7 @@ package http_client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -17,6 +18,7 @@ type RequestOption func(options *RequestOptions)
 type RequestOptions struct {
 	body   any
 	header http.Header
+	ctx    context.Context
 }
 
 func WithBody(body any) RequestOption {
@@ -28,6 +30,12 @@ func WithBody(body any) RequestOption {
 func WithHeader(key, value string) RequestOption {
 	return func(c *RequestOptions) {
 		c.header.Set(key, value)
+	}
+}
+
+func WithContext(ctx context.Context) RequestOption {
+	return func(c *RequestOptions) {
+		c.ctx = ctx
 	}
 }
 
@@ -63,7 +71,7 @@ func (c *HttpClient) NewRequest(method string, url string, option ...RequestOpti
 			body = bytes.NewBuffer(data)
 		}
 	}
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequestWithContext(options.ctx, method, url, body)
 	if err != nil {
 		return nil, err
 	}

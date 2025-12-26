@@ -37,10 +37,15 @@ func (s *Scheduler) schedule() {
 				<-s.worker
 			}
 		case <-s.ctx.Done():
+			close(s.queue)
 			for task := range s.queue {
 				task.Abort(s.ctx)
 			}
+			for i := 0; i < cap(s.worker); i++ {
+				s.worker <- struct{}{}
+			}
 			s.wg.Done()
+			return
 		}
 	}
 }

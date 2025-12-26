@@ -3,14 +3,15 @@ package gemini
 import (
 	"context"
 	"errors"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Provider struct {
@@ -58,6 +59,11 @@ func (p *Provider) Create(request Request) {
 	ret := make([]image.Response, 0)
 	getToken := ai.GTokenManager[request.Model].GetTokenIterator()
 	for {
+		select {
+		case <-p.Ctx.Done():
+			return
+		default:
+		}
 		token := getToken()
 		if token == nil {
 			break
@@ -83,7 +89,7 @@ func (p *Provider) Create(request Request) {
 		if token.Model == "gemini-nano-banana-hd" && token.GetSupplier() == consts.Geek {
 			parser = image.NewGenericParser(&image.OpenAIURLStrategy{}, &image.GenericB64Strategy{})
 		}
-		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, parser)
+		requester := image.NewRequester(p.Ctx, ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, parser)
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		var retryCount int
 	retry:

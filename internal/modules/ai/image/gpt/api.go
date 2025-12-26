@@ -3,13 +3,14 @@ package gpt
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
+
 	"github.com/reusedev/draw-hub/internal/consts"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/observer"
-	"sync"
-	"time"
 )
 
 type Provider struct {
@@ -73,6 +74,11 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 		model = consts.GPT4oImage.String()
 	}
 	for {
+		select {
+		case <-p.Ctx.Done():
+			return
+		default:
+		}
 		token := getToken()
 		if token == nil {
 			break
@@ -88,7 +94,7 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 			Prompt:     request.Prompt,
 			Model:      token.Model,
 		}
-		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage4oParser())
+		requester := image.NewRequester(p.Ctx, ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage4oParser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response := requester.Do()
 		ret = append(ret, response)
@@ -142,6 +148,11 @@ func (p *Provider) FastSpeed(request FastRequest) {
 
 	getToken := ai.GTokenManager[consts.GPTImage1.String()].GetTokenIterator()
 	for {
+		select {
+		case <-p.Ctx.Done():
+			return
+		default:
+		}
 		token := getToken()
 		if token == nil {
 			break
@@ -163,7 +174,7 @@ func (p *Provider) FastSpeed(request FastRequest) {
 			Quality:    request.Quality,
 			Size:       request.Size,
 		}
-		requester := image.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage1Parser())
+		requester := image.NewRequester(p.Ctx, ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage1Parser())
 		requester.SetTaskID(request.TaskID) // 设置TaskID
 		response := requester.Do()
 		ret = append(ret, response)
