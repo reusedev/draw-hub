@@ -2,36 +2,51 @@ package queue
 
 import (
 	"context"
-	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"sync"
 )
 
 var ImageTaskQueue = NewTaskQueue(100)
-var closeOnce sync.Once
 
-func exeImageTask(ctx context.Context, wg *sync.WaitGroup) {
-	wg.Add(1)
+type Scheduler struct {
+	ctx    context.Context
+	queue  TaskQueue
+	worker chan struct{}
+	wg     *sync.WaitGroup
+}
+
+func NewQueueScheduler(ctx context.Context, queue TaskQueue, workerNum int, wg *sync.WaitGroup) *Scheduler {
+	return &Scheduler{
+		ctx:    ctx,
+		queue:  queue,
+		worker: make(chan struct{}, workerNum),
+		wg:     wg,
+	}
+}
+
+func (s *Scheduler) schedule() {
 	for {
 		select {
-		case task, ok := <-ImageTaskQueue:
-			if ok {
-				wg.Add(1)
+		case s.worker <- struct{}{}:
+			select {
+			case task := <-s.queue:
 				go func() {
-					task.Execute(ctx, wg)
+					task.Execute(s.ctx)
+					<-s.worker
 				}()
-			} else {
-				wg.Done()
-				return
+			default:
+				<-s.worker
 			}
-		case <-ctx.Done():
-			closeOnce.Do(func() {
-				close(ImageTaskQueue)
-				logs.Logger.Info().Msg("Image task queue closed")
-			})
+		case <-s.ctx.Done():
+			for task := range s.queue {
+				task.Abort(s.ctx)
+			}
+			s.wg.Done()
 		}
 	}
 }
 
-func InitImageTaskQueue(ctx context.Context, wg *sync.WaitGroup) {
-	go exeImageTask(ctx, wg)
+func InitTaskScheduler(ctx context.Context, wg *sync.WaitGroup) {
+	wg.Add(1)
+	scheduler := NewQueueScheduler(ctx, ImageTaskQueue, 50, wg)
+	go scheduler.schedule()
 }

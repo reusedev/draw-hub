@@ -2,11 +2,11 @@ package queue
 
 import (
 	"context"
-	"sync"
 )
 
 type Task interface {
-	Execute(ctx context.Context, wg *sync.WaitGroup)
+	Execute(ctx context.Context)
+	Abort(ctx context.Context)
 }
 
 type TaskQueue chan Task

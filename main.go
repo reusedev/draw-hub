@@ -36,7 +36,7 @@ func main() {
 	logs.InitLogger()
 	syscall.Umask(0007)
 	wg := &sync.WaitGroup{}
-	queue.InitImageTaskQueue(ctx, wg)
+	queue.InitTaskScheduler(ctx, wg)
 	mysql.CreateDataBase(config.GConfig.MySQL)
 	mysql.InitMySQL(config.GConfig.MySQL)
 	mysql.DB.AutoMigrate(&model.InputImage{}, &model.OutputImage{}, &model.Task{}, &model.TaskImage{}, &model.SupplierInvokeHistory{})
