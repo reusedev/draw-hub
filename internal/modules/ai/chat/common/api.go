@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/chat"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
@@ -14,7 +15,7 @@ func Chat(request chat.CommonRequest) []chat.Response {
 		if token == nil {
 			break
 		}
-		requester := chat.NewRequester(ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &request, &chat.CommonParser{})
+		requester := chat.NewRequester(context.Background(), ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &request, &chat.CommonParser{})
 		response, err := requester.Do()
 		if err != nil {
 			logs.Logger.Err(err).Msg("common-Chat")

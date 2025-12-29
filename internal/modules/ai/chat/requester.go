@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/http_client"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
@@ -10,13 +11,15 @@ import (
 )
 
 type Requester struct {
+	ctx          context.Context
 	token        ai.Token
 	RequestTypes RequestContent
 	Parser       Parser
 }
 
-func NewRequester(token ai.Token, requestTypes RequestContent, parser Parser) *Requester {
+func NewRequester(ctx context.Context, token ai.Token, requestTypes RequestContent, parser Parser) *Requester {
 	return &Requester{
+		ctx:          ctx,
 		token:        token,
 		RequestTypes: requestTypes,
 		Parser:       parser,
@@ -35,6 +38,7 @@ func (r *Requester) Do() (Response, error) {
 		http_client.WithHeader("Authorization", "Bearer "+r.token.Token),
 		http_client.WithHeader("Content-Type", r.RequestTypes.ContentType()),
 		http_client.WithBody(body),
+		http_client.WithContext(r.ctx),
 	)
 	if err != nil {
 		return nil, err
