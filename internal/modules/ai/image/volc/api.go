@@ -41,20 +41,12 @@ type Request struct {
 
 func (p *Provider) Create(request Request) {
 	var once sync.Once
-	down := make(chan struct{})
-	defer func() { down <- struct{}{} }()
-	go func() {
-		select {
-		case <-p.Ctx.Done():
-			once.Do(func() {
-				p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
-					TaskID: request.TaskID,
-				})
+	defer func() {
+		once.Do(func() {
+			p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
+				TaskID: request.TaskID,
 			})
-			return
-		case <-down:
-			return
-		}
+		})
 	}()
 	ret := make([]image.Response, 0)
 	getToken := ai.GTokenManager[consts.JiMengV40.String()].GetTokenIterator()

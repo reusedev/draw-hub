@@ -48,20 +48,12 @@ type SlowRequest struct {
 
 func (p *Provider) SlowSpeed(request SlowRequest) {
 	var once sync.Once
-	down := make(chan struct{})
-	defer func() { down <- struct{}{} }()
-	go func() {
-		select {
-		case <-p.Ctx.Done():
-			once.Do(func() {
-				p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
-					TaskID: request.TaskID,
-				})
+	defer func() {
+		once.Do(func() {
+			p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
+				TaskID: request.TaskID,
 			})
-			return
-		case <-down:
-			return
-		}
+		})
 	}()
 	ret := make([]image.Response, 0)
 	var model string
@@ -120,20 +112,12 @@ func (p *Provider) SlowSpeed(request SlowRequest) {
 
 func (p *Provider) FastSpeed(request FastRequest) {
 	var once sync.Once
-	down := make(chan struct{})
-	defer func() { down <- struct{}{} }()
-	go func() {
-		select {
-		case <-p.Ctx.Done():
-			once.Do(func() {
-				p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
-					TaskID: request.TaskID,
-				})
+	defer func() {
+		once.Do(func() {
+			p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
+				TaskID: request.TaskID,
 			})
-			return
-		case <-down:
-			return
-		}
+		})
 	}()
 	// 记录方法开始执行日志
 	logs.Logger.Info().

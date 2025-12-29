@@ -52,6 +52,6 @@ func (s *Scheduler) schedule() {
 
 func InitTaskScheduler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
-	scheduler := NewQueueScheduler(ctx, ImageTaskQueue, 50, wg)
+	scheduler := NewQueueScheduler(ctx, ImageTaskQueue, 5, wg)
 	go scheduler.schedule()
 }
