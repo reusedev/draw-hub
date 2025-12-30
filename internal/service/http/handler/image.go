@@ -278,7 +278,7 @@ func (s *StorageHandler) uploadToOSS(request request.UploadImage) error {
 	}
 	var ossObject ali.OSSObject
 	var bucket string
-	if request.Transfer {
+	if request.Transfer || request.Region == "sg" {
 		ossObject, err = ali.OssSgClient.UploadFile(&ossReq)
 		bucket = ali.OssSgClient.GetBucket()
 	} else {
@@ -399,6 +399,7 @@ func UploadImage(c *gin.Context) {
 	}
 	req.FullWithDefault()
 	req.FileType = c.GetHeader("file_type")
+	req.Region = c.GetHeader("region")
 	handler := NewStorageHandler()
 	err = handler.Upload(req)
 	if err != nil {

@@ -16,6 +16,7 @@ type UploadImage struct {
 	OnlineFileName    string `form:"-"`
 	OnlineFileContent []byte `form:"-"`
 	FileType          string `form:"-"`
+	Region            string `form:"-"`
 	Transfer          bool   `form:"-"` // 是否为转存接口请求
 }
 
