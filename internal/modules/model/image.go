@@ -5,6 +5,21 @@ import (
 	"time"
 )
 
+type Image struct {
+	Id                int       `json:"id" gorm:"primaryKey"`
+	Bucket            string    `json:"bucket" gorm:"column:bucket;type:varchar(100)"`
+	PNGKey            string    `json:"png_key" gorm:"column:png_key;type:varchar(100)"`
+	JPGKey            string    `json:"jpg_key" gorm:"column:jpg_key;type:varchar(100)"`
+	RawKey            string    `json:"raw_key" gorm:"column:raw_key;type:varchar(100)"`
+	ModelSupplierURL  string    `json:"model_supplier_url" gorm:"column:model_supplier_url;type:varchar(500)"`
+	ModelSupplierName string    `json:"model_supplier_name" gorm:"column:model_supplier_name;type:varchar(20)"`
+	CreatedAt         time.Time `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
+}
+
+func (Image) TableName() string {
+	return "image"
+}
+
 type InputImage struct {
 	Id                  int       `json:"id" gorm:"primaryKey"`
 	Path                string    `json:"path" gorm:"column:path;type:varchar(255)"`

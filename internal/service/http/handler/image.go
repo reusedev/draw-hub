@@ -27,6 +27,7 @@ type StorageHandler struct {
 	cache       *cache.Manager[string]
 	inputImage  model.InputImage
 	outputImage model.OutputImage
+	image       model.Image
 }
 
 func NewStorageHandler() *StorageHandler {
@@ -271,6 +272,7 @@ func (s *StorageHandler) upload(request request.UploadImage) error {
 	}
 	return nil
 }
+
 func (s *StorageHandler) uploadToOSS(request request.UploadImage) error {
 	ossReq, err := s.transformToOssUpload(request)
 	if err != nil {
@@ -409,6 +411,9 @@ func UploadImage(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(handler.Image(req.FileType)))
 }
+
+
+
 
 func GetImage(c *gin.Context) {
 	var req request.GetImage

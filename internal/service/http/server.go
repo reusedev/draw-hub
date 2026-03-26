@@ -72,4 +72,17 @@ func initRouter(e *gin.Engine) {
 		file.DELETE("", handler.DeleteImage)
 		file.POST("/transfer", handler.TransferImage)
 	}
+
+	// /api/v2 接口
+	apiV2 := e.Group("/api/v2")
+	apiV2Image := apiV2.Group("/image")
+	{
+		apiV2Image.POST("/upload", handler.UploadImageV2New)
+		apiV2Image.POST("/get", handler.GetImageV2)
+	}
+	apiV2Task := apiV2.Group("/task")
+	{
+		apiV2Task.POST("/create", handler.CreateTaskV2)
+		apiV2Task.POST("/get", handler.GetTaskV2)
+	}
 }

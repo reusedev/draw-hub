@@ -5,6 +5,15 @@ import (
 	"github.com/reusedev/draw-hub/internal/modules/model"
 )
 
+func ImageById(id int) (model.Image, error) {
+	var image model.Image
+	err := mysql.DB.Model(&model.Image{}).Where("id = ?", id).First(&image).Error
+	if err != nil {
+		return model.Image{}, err
+	}
+	return image, nil
+}
+
 func InputImageById(id int) (model.InputImage, error) {
 	var inputImage model.InputImage
 	err := mysql.DB.Model(&model.InputImage{}).Where("id = ?", id).First(&inputImage).Error

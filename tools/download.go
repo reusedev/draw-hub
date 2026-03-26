@@ -130,6 +130,7 @@ const (
 	ImageTypePNG     ImageType = "png"
 	ImageTypeGIF     ImageType = "gif"
 	ImageTypeWEBP    ImageType = "webp"
+	ImageTypeHEIC    ImageType = "heic"
 	ImageTypeUnknown ImageType = "unknown"
 )
 
@@ -148,7 +149,20 @@ func (i ImageType) ImagingFormat() (imaging.Format, error) {
 }
 
 func DetectImageType(data []byte) ImageType {
-	switch http.DetectContentType(data) {
+	if len(data) < 12 {
+		return "unknown"
+	}
+	header := string(data[4:12])
+	switch {
+	case strings.Contains(header, "ftypheic"),
+		strings.Contains(header, "ftypheix"),
+		strings.Contains(header, "ftyphevc"),
+		strings.Contains(header, "ftypmif1"):
+		return ImageTypeHEIC
+	}
+
+	contentType := http.DetectContentType(data)
+	switch contentType {
 	case "image/jpeg":
 		return ImageTypeJPEG
 	case "image/png":

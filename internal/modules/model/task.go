@@ -20,8 +20,10 @@ type Task struct {
 	FailedReason string         `json:"failed_reason" gorm:"column:failed_reason;type:varchar(1000)"`
 	Progress     float32        `json:"progress" gorm:"column:progress;type:float"`
 	CreatedAt    time.Time      `json:"created_at" gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
-	UpdatedAt    time.Time      `json:"updated_at" gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
-	TaskImages   []TaskImage    `json:"task_images" gorm:"foreignKey:TaskId"`
+	UpdatedAt        time.Time      `json:"updated_at" gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP"`
+	GeneratedImageId int            `json:"generated_image_id" gorm:"column:generated_image_id;type:int;default:0"`
+	ApiVersion       string         `json:"api_version" gorm:"column:api_version;type:varchar(10);default:'v1'"`
+	TaskImages       []TaskImage    `json:"task_images" gorm:"foreignKey:TaskId"`
 }
 
 func (*Task) TableName() string {

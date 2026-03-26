@@ -539,9 +539,11 @@ func (h *TaskHandler) endWork() error {
 	for _, v := range h.imageResponse {
 		if v.Succeed() {
 			succeed = true
-			err := h.createImageRecords(v)
-			if err != nil {
-				return err
+			if h.task.ApiVersion != "v2" {
+				err := h.createImageRecords(v)
+				if err != nil {
+					return err
+				}
 			}
 			taskRecord := model.Task{
 				Id:       h.task.Id,
@@ -551,6 +553,16 @@ func (h *TaskHandler) endWork() error {
 			if h.task.Model == "" {
 				taskRecord.Model = v.GetModel()
 			}
+
+			// 先保存生成的图片到 image 表（PNG + JPG 双存），获取 imageId（仅限 v2 接口创建的任务）
+			if config.GConfig.CloudStorageEnabled && h.task.ApiVersion == "v2" {
+				imageId, err := h.saveGeneratedToImageTable(v)
+				if err == nil && imageId > 0 {
+					taskRecord.GeneratedImageId = imageId
+				}
+			}
+
+			// 一起更新状态和 generated_image_id，避免客户端轮询拿到 success 状态却没有 image_id 的竞争条件
 			err = mysql.DB.Updates(&taskRecord).Error
 			if err != nil {
 				return err
@@ -816,4 +828,45 @@ func uploadCompressionImage(image []byte, quality int) (compression ali.OSSObjec
 	compression.URL = presignRet.URL
 	compression.Key = key
 	return
+}
+
+// saveGeneratedToImageTable 将任务生成的图片保存到 image 表
+func (h *TaskHandler) saveGeneratedToImageTable(resp image.Response) (int, error) {
+	// 获取第一张生成的图片字节
+	var imageBytes []byte
+	var supplierURL string
+
+	for _, url := range resp.GetURLs() {
+		b, _, err := tools.GetOnlineImage(url)
+		if err != nil {
+			logs.Logger.Err(err).Msg("V2-SaveGenerated-GetOnlineImage")
+			continue
+		}
+		imageBytes = b
+		supplierURL = url
+		break
+	}
+	if imageBytes == nil {
+		for _, b64 := range resp.GetB64s() {
+			decoded, err := base64.StdEncoding.DecodeString(b64)
+			if err != nil {
+				logs.Logger.Err(err).Msg("V2-SaveGenerated-DecodeB64")
+				continue
+			}
+			imageBytes = decoded
+			break
+		}
+	}
+	if imageBytes == nil {
+		logs.Logger.Warn().Int("task_id", h.task.Id).Msg("V2-SaveGenerated: no image data to save")
+		return 0, fmt.Errorf("no image data to save")
+	}
+
+	imageId, err := saveImageRecord(imageBytes, supplierURL, resp.GetSupplier())
+	if err != nil {
+		logs.Logger.Err(err).Int("task_id", h.task.Id).Msg("V2-SaveGenerated-SaveImageRecord")
+		return 0, err
+	}
+
+	return imageId, nil
 }

@@ -39,7 +39,7 @@ func main() {
 	queue.InitTaskScheduler(ctx, wg)
 	mysql.CreateDataBase(config.GConfig.MySQL)
 	mysql.InitMySQL(config.GConfig.MySQL)
-	mysql.DB.AutoMigrate(&model.InputImage{}, &model.OutputImage{}, &model.Task{}, &model.TaskImage{}, &model.SupplierInvokeHistory{})
+	mysql.DB.AutoMigrate(&model.InputImage{}, &model.OutputImage{}, &model.Task{}, &model.TaskImage{}, &model.SupplierInvokeHistory{}, &model.Image{})
 	mysql.FieldMigrate()
 	ali.InitOSS(config.GConfig.AliOss)
 	ali.InitOSSSg(config.GConfig.AliOssSg)
