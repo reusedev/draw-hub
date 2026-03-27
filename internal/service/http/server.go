@@ -85,4 +85,5 @@ func initRouter(e *gin.Engine) {
 		apiV2Task.POST("/create", handler.CreateTaskV2)
 		apiV2Task.POST("/get", handler.GetTaskV2)
 	}
+	apiV2.POST("/image2text", handler.Image2Text)
 }
