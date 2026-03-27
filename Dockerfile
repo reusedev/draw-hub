@@ -1,32 +1,43 @@
-# 构建阶段
-FROM docker.m.daocloud.io/library/golang:1.24-alpine AS builder
+# ---------- builder ----------
+FROM docker.m.daocloud.io/library/golang:1.24 AS builder
 
 WORKDIR /app
 
-# 配置 Go 模块代理和 Alpine 镜像源
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
-    && go env -w GOPROXY=https://goproxy.cn,direct
+# 使用国内源（可选）
+RUN apt-get update \
+    && apt-get install -y \
+        pkg-config \
+        libheif-dev \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# 复制源代码
+# Go 代理
+RUN go env -w GOPROXY=https://goproxy.cn,direct
+
 COPY . .
 
-# 安装依赖
 RUN go mod download
 
-# 构建应用
-RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+# ⚠️ 必须开启 CGO
+ENV CGO_ENABLED=1
 
-# 运行阶段
-FROM docker.m.daocloud.io/library/alpine:latest
+RUN go build -o main .
+
+# ---------- runtime ----------
+FROM docker.m.daocloud.io/library/debian:bookworm-slim
 
 WORKDIR /app
 
-# 配置 Alpine 镜像源并安装必要的运行时依赖
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
-    && apk update \
-    && apk add --no-cache ca-certificates tzdata curl
-# 设置时区
+# 安装运行时依赖
+RUN apt-get update \
+    && apt-get install -y \
+        libheif1 \
+        ca-certificates \
+        tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV TZ=Asia/Shanghai
 
-# 从构建阶段复制二进制文件
 COPY --from=builder /app/main .
+
+CMD ["./main"]
