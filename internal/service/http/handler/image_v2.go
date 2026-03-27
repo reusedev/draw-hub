@@ -46,7 +46,7 @@ func UploadImageV2New(c *gin.Context) {
 	}
 
 	imageRecord := model.Image{
-		Bucket:    ali.OssClient.GetBucket(),
+		Bucket:    ali.OssSgClient.GetBucket(),
 		CreatedAt: time.Now(),
 	}
 
@@ -58,7 +58,7 @@ func UploadImageV2New(c *gin.Context) {
 
 	// 0. 直接保存原图到 raw_key
 	rawKey := config.GConfig.AliOss.Directory + uuid.New().String() + ext
-	err = uploadBytesToOSS(rawKey, header.Filename, fileBytes)
+	err = uploadBytesSToSgOSS(rawKey, header.Filename, fileBytes)
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-Image-Upload-Raw-OSS")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
@@ -74,7 +74,7 @@ func UploadImageV2New(c *gin.Context) {
 		return
 	}
 	pngKey := config.GConfig.AliOss.Directory + uuid.New().String() + ".png"
-	err = uploadBytesToOSS(pngKey, header.Filename, pngBytes)
+	err = uploadBytesSToSgOSS(pngKey, header.Filename, pngBytes)
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-Image-Upload-PNG-OSS")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
@@ -90,7 +90,7 @@ func UploadImageV2New(c *gin.Context) {
 		return
 	}
 	jpgKey := config.GConfig.AliOss.Directory + uuid.New().String() + ".jpeg"
-	err = uploadBytesToOSS(jpgKey, uuid.New().String()+".jpeg", jpgBytes)
+	err = uploadBytesSToSgOSS(jpgKey, uuid.New().String()+".jpeg", jpgBytes)
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-Image-Upload-JPG-OSS")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
@@ -152,7 +152,7 @@ func GetImageV2(c *gin.Context) {
 
 	// Raw URL
 	if img.RawKey != "" {
-		rawURL, err := ali.OssClient.URL(img.RawKey, duration)
+		rawURL, err := ali.OssSgClient.URL(img.RawKey, duration)
 		if err != nil {
 			logs.Logger.Err(err).Msg("V2-Image-Get-Raw-URL")
 		} else {
@@ -162,7 +162,7 @@ func GetImageV2(c *gin.Context) {
 
 	// PNG URL
 	if img.PNGKey != "" {
-		pngURL, err := ali.OssClient.URL(img.PNGKey, duration)
+		pngURL, err := ali.OssSgClient.URL(img.PNGKey, duration)
 		if err != nil {
 			logs.Logger.Err(err).Msg("V2-Image-Get-PNG-URL")
 		} else {
@@ -172,7 +172,7 @@ func GetImageV2(c *gin.Context) {
 
 	// JPG URL
 	if img.JPGKey != "" {
-		jpgURL, err := ali.OssClient.URL(img.JPGKey, duration)
+		jpgURL, err := ali.OssSgClient.URL(img.JPGKey, duration)
 		if err != nil {
 			logs.Logger.Err(err).Msg("V2-Image-Get-JPG-URL")
 		} else {
@@ -183,7 +183,7 @@ func GetImageV2(c *gin.Context) {
 	// Thumbnail URL（基于 raw key，使用 OSS 图片处理缩放 50%）
 	thumbnailKey := img.RawKey
 	if thumbnailKey != "" {
-		presignResult, err := ali.OssClient.Resize50(thumbnailKey, duration)
+		presignResult, err := ali.OssSgClient.Resize50(thumbnailKey, duration)
 		if err != nil {
 			logs.Logger.Err(err).Msg("V2-Image-Get-Thumbnail-URL")
 		} else {
@@ -330,8 +330,8 @@ func GetTaskV2(c *gin.Context) {
 	}))
 }
 
-// uploadBytesToOSS 上传字节数据到 OSS
-func uploadBytesToOSS(key, filename string, data []byte) error {
+// uploadBytesSToSgOSS 上传字节数据到 OSS
+func uploadBytesSToSgOSS(key, filename string, data []byte) error {
 	urlExpire, _ := time.ParseDuration(config.GConfig.URLExpires)
 	req := ali.UploadRequest{
 		Key:       key,
@@ -340,7 +340,7 @@ func uploadBytesToOSS(key, filename string, data []byte) error {
 		Acl:       "private",
 		URLExpire: urlExpire,
 	}
-	_, err := ali.OssClient.UploadFile(&req)
+	_, err := ali.OssSgClient.UploadFile(&req)
 	return err
 }
 
@@ -348,7 +348,7 @@ func uploadBytesToOSS(key, filename string, data []byte) error {
 // 上传原图（PNG）和压缩图（JPG）到 OSS
 func saveImageRecord(imageBytes []byte, supplierURL, supplierName string) (int, error) {
 	imageRecord := model.Image{
-		Bucket:            ali.OssClient.GetBucket(),
+		Bucket:            ali.OssSgClient.GetBucket(),
 		ModelSupplierURL:  supplierURL,
 		ModelSupplierName: supplierName,
 		CreatedAt:         time.Now(),
@@ -362,7 +362,7 @@ func saveImageRecord(imageBytes []byte, supplierURL, supplierName string) (int, 
 
 	// 0. 直接保存原图到 raw_key
 	rawKey := config.GConfig.AliOss.Directory + uuid.New().String() + ext
-	err := uploadBytesToOSS(rawKey, uuid.New().String()+ext, imageBytes)
+	err := uploadBytesSToSgOSS(rawKey, uuid.New().String()+ext, imageBytes)
 	if err != nil {
 		return 0, err
 	}
@@ -376,7 +376,7 @@ func saveImageRecord(imageBytes []byte, supplierURL, supplierName string) (int, 
 		pngBytes = imageBytes
 	}
 	pngKey := config.GConfig.AliOss.Directory + uuid.New().String() + ".png"
-	err = uploadBytesToOSS(pngKey, uuid.New().String()+".png", pngBytes)
+	err = uploadBytesSToSgOSS(pngKey, uuid.New().String()+".png", pngBytes)
 	if err != nil {
 		return 0, err
 	}
@@ -388,7 +388,7 @@ func saveImageRecord(imageBytes []byte, supplierURL, supplierName string) (int, 
 		logs.Logger.Err(err).Msg("V2-SaveImage-CompressJPG")
 	} else {
 		jpgKey := config.GConfig.AliOss.Directory + uuid.New().String() + ".jpeg"
-		err = uploadBytesToOSS(jpgKey, uuid.New().String()+".jpeg", jpgBytes)
+		err = uploadBytesSToSgOSS(jpgKey, uuid.New().String()+".jpeg", jpgBytes)
 		if err != nil {
 			logs.Logger.Err(err).Msg("V2-SaveImage-JPG-OSS")
 		} else {
