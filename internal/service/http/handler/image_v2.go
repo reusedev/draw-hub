@@ -57,7 +57,7 @@ func UploadImageV2New(c *gin.Context) {
 	}
 
 	// 0. 直接保存原图到 raw_key
-	rawKey := config.GConfig.AliOss.Directory + uuid.New().String() + ext
+	rawKey := config.GConfig.AliOssSg.Directory + uuid.New().String() + ext
 	err = uploadBytesSToSgOSS(rawKey, header.Filename, fileBytes)
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-Image-Upload-Raw-OSS")
@@ -73,7 +73,7 @@ func UploadImageV2New(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
-	pngKey := config.GConfig.AliOss.Directory + uuid.New().String() + ".png"
+	pngKey := config.GConfig.AliOssSg.Directory + uuid.New().String() + ".png"
 	err = uploadBytesSToSgOSS(pngKey, header.Filename, pngBytes)
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-Image-Upload-PNG-OSS")
@@ -89,7 +89,7 @@ func UploadImageV2New(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response.InternalError)
 		return
 	}
-	jpgKey := config.GConfig.AliOss.Directory + uuid.New().String() + ".jpeg"
+	jpgKey := config.GConfig.AliOssSg.Directory + uuid.New().String() + ".jpeg"
 	err = uploadBytesSToSgOSS(jpgKey, uuid.New().String()+".jpeg", jpgBytes)
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-Image-Upload-JPG-OSS")
@@ -361,7 +361,7 @@ func saveImageRecord(imageBytes []byte, supplierURL, supplierName string) (int, 
 	}
 
 	// 0. 直接保存原图到 raw_key
-	rawKey := config.GConfig.AliOss.Directory + uuid.New().String() + ext
+	rawKey := config.GConfig.AliOssSg.Directory + uuid.New().String() + ext
 	err := uploadBytesSToSgOSS(rawKey, uuid.New().String()+ext, imageBytes)
 	if err != nil {
 		return 0, err
@@ -375,7 +375,7 @@ func saveImageRecord(imageBytes []byte, supplierURL, supplierName string) (int, 
 		// 如果转换失败，退化为直接保存原始格式到 PNGKey，防止丢失原图
 		pngBytes = imageBytes
 	}
-	pngKey := config.GConfig.AliOss.Directory + uuid.New().String() + ".png"
+	pngKey := config.GConfig.AliOssSg.Directory + uuid.New().String() + ".png"
 	err = uploadBytesSToSgOSS(pngKey, uuid.New().String()+".png", pngBytes)
 	if err != nil {
 		return 0, err
@@ -387,7 +387,7 @@ func saveImageRecord(imageBytes []byte, supplierURL, supplierName string) (int, 
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-SaveImage-CompressJPG")
 	} else {
-		jpgKey := config.GConfig.AliOss.Directory + uuid.New().String() + ".jpeg"
+		jpgKey := config.GConfig.AliOssSg.Directory + uuid.New().String() + ".jpeg"
 		err = uploadBytesSToSgOSS(jpgKey, uuid.New().String()+".jpeg", jpgBytes)
 		if err != nil {
 			logs.Logger.Err(err).Msg("V2-SaveImage-JPG-OSS")
