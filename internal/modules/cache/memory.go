@@ -15,7 +15,8 @@ type Manager[T any] struct {
 }
 
 var (
-	imageCacheManager *Manager[string]
+	imageCacheManager   *Manager[string]
+	imageV2CacheManager *Manager[string]
 )
 
 func init() {
@@ -23,10 +24,20 @@ func init() {
 	imageCacheManager = &Manager[string]{
 		cache: cache.New[string](go_cache.NewGoCache(client)),
 	}
+
+	// V2 图片 URL 缓存：24 小时有效，每小时清理一次过期项
+	clientV2 := gocache.New(24*time.Hour, 1*time.Hour)
+	imageV2CacheManager = &Manager[string]{
+		cache: cache.New[string](go_cache.NewGoCache(clientV2)),
+	}
 }
 
 func ImageCacheManager() *Manager[string] {
 	return imageCacheManager
+}
+
+func ImageV2CacheManager() *Manager[string] {
+	return imageV2CacheManager
 }
 
 func (m *Manager[T]) SetWithExpiration(key string, value T, expir time.Duration) error {

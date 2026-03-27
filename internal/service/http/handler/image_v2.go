@@ -3,6 +3,8 @@ package handler
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/reusedev/draw-hub/config"
 	"github.com/reusedev/draw-hub/internal/components/mysql"
 	"github.com/reusedev/draw-hub/internal/consts"
+	mcache "github.com/reusedev/draw-hub/internal/modules/cache"
 	"github.com/reusedev/draw-hub/internal/modules/dao"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
 	"github.com/reusedev/draw-hub/internal/modules/model"
@@ -108,7 +111,7 @@ func UploadImageV2New(c *gin.Context) {
 }
 
 // GetImageV2 获取图片链接 POST /api/v2/image/get
-// 根据 image 表 ID 生成预签名 URL
+// 根据 image 表 ID 生成预签名 URL，24 小时内缓存相同结果，URL 有效期 7 天
 func GetImageV2(c *gin.Context) {
 	var req struct {
 		ID int `json:"id" binding:"required"`
@@ -118,6 +121,19 @@ func GetImageV2(c *gin.Context) {
 		return
 	}
 
+	cacheKey := fmt.Sprintf("image_v2_urls_%d", req.ID)
+
+	// 尝试从缓存获取
+	cached, _ := mcache.ImageV2CacheManager().GetValue(cacheKey)
+	if cached != "" {
+		var data gin.H
+		if err := json.Unmarshal([]byte(cached), &data); err == nil {
+			c.JSON(http.StatusOK, response.SuccessWithData(data))
+			return
+		}
+	}
+
+	// 缓存未命中，查库并生成 URL
 	img, err := dao.ImageById(req.ID)
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-Image-Get-DB")
@@ -164,7 +180,7 @@ func GetImageV2(c *gin.Context) {
 		}
 	}
 
-	// Thumbnail URL（基于 JPG key，使用 OSS 图片处理缩放 50%）
+	// Thumbnail URL（基于 raw key，使用 OSS 图片处理缩放 50%）
 	thumbnailKey := img.RawKey
 	if thumbnailKey != "" {
 		presignResult, err := ali.OssClient.Resize50(thumbnailKey, duration)
@@ -173,6 +189,11 @@ func GetImageV2(c *gin.Context) {
 		} else {
 			data["thumbnail_url"] = presignResult.URL
 		}
+	}
+
+	// 写入缓存，24 小时有效
+	if jsonBytes, err := json.Marshal(data); err == nil {
+		_ = mcache.ImageV2CacheManager().SetWithExpiration(cacheKey, string(jsonBytes), 24*time.Hour)
 	}
 
 	c.JSON(http.StatusOK, response.SuccessWithData(data))
