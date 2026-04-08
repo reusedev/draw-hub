@@ -42,7 +42,7 @@ func WithContext(ctx context.Context) RequestOption {
 func New() *HttpClient {
 	return &HttpClient{
 		HttpClient: &http.Client{
-			Timeout: 120 * time.Second, // 设置120秒超时,防止请求永久挂起
+			Timeout: 300 * time.Second, // 设置300秒超时,防止请求永久挂起
 		},
 	}
 }
