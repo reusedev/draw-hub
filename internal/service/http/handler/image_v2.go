@@ -203,9 +203,9 @@ func GetImageV2(c *gin.Context) {
 // 使用 image 表中的图片作为输入，创建编辑任务
 func CreateTaskV2(c *gin.Context) {
 	var req struct {
-		ImageId int    `json:"image_id"`
-		Prompt  string `json:"prompt" binding:"required"`
-		Model   string `json:"model" binding:"required"`
+		ImageIds []int  `json:"image_ids"`
+		Prompt   string `json:"prompt" binding:"required"`
+		Model    string `json:"model" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, response.ParamError)
@@ -216,38 +216,44 @@ func CreateTaskV2(c *gin.Context) {
 	taskType := consts.TaskTypeGenerate.String()
 
 	// 如果提供了 image_id，需要获取输入图片
-	var inputImageId int
-	if req.ImageId > 0 {
+	type inputImageInfo struct {
+		inputImageId int
+	}
+	var inputImages []inputImageInfo
+
+	if len(req.ImageIds) > 0 {
 		taskType = consts.TaskTypeEdit.String()
-		img, err := dao.ImageById(req.ImageId)
-		if err != nil {
-			logs.Logger.Err(err).Msg("V2-Task-Create-GetImage")
-			c.JSON(http.StatusBadRequest, response.ParamErrorWithMessage("image not found"))
-			return
-		}
+		for _, imageId := range req.ImageIds {
+			img, err := dao.ImageById(imageId)
+			if err != nil {
+				logs.Logger.Err(err).Int("image_id", imageId).Msg("V2-Task-Create-GetImage")
+				c.JSON(http.StatusBadRequest, response.ParamErrorWithMessage(fmt.Sprintf("image not found: %d", imageId)))
+				return
+			}
 
-		// 获取图片 OSS key
-		ossKey := img.RawKey
-		if ossKey == "" {
-			c.JSON(http.StatusBadRequest, response.ParamErrorWithMessage("image has no OSS key"))
-			return
-		}
+			// 获取图片 OSS key
+			ossKey := img.RawKey
+			if ossKey == "" {
+				c.JSON(http.StatusBadRequest, response.ParamErrorWithMessage(fmt.Sprintf("image has no OSS key: %d", imageId)))
+				return
+			}
 
-		// 创建 InputImage 记录，复用现有的 TaskImage 关联机制
-		inputImage := model.InputImage{
-			StorageSupplierName: config.GConfig.CloudStorageSupplier,
-			Bucket:              img.Bucket,
-			Key:                 ossKey,
-			ACL:                 "private",
-			CreatedAt:           now,
+			// 创建 InputImage 记录，复用现有的 TaskImage 关联机制
+			inputImage := model.InputImage{
+				StorageSupplierName: config.GConfig.CloudStorageSupplier,
+				Bucket:              img.Bucket,
+				Key:                 ossKey,
+				ACL:                 "private",
+				CreatedAt:           now,
+			}
+			err = mysql.DB.Create(&inputImage).Error
+			if err != nil {
+				logs.Logger.Err(err).Msg("V2-Task-Create-InputImage")
+				c.JSON(http.StatusInternalServerError, response.InternalError)
+				return
+			}
+			inputImages = append(inputImages, inputImageInfo{inputImageId: inputImage.Id})
 		}
-		err = mysql.DB.Create(&inputImage).Error
-		if err != nil {
-			logs.Logger.Err(err).Msg("V2-Task-Create-InputImage")
-			c.JSON(http.StatusInternalServerError, response.InternalError)
-			return
-		}
-		inputImageId = inputImage.Id
 	}
 
 	// 创建 Task 记录
@@ -269,10 +275,10 @@ func CreateTaskV2(c *gin.Context) {
 	}
 
 	// 关联输入图片
-	if inputImageId > 0 {
+	for _, input := range inputImages {
 		taskImageRecord := model.TaskImage{
 			TaskId:  taskRecord.Id,
-			ImageId: inputImageId,
+			ImageId: input.inputImageId,
 			Type:    model.TaskImageTypeInput.String(),
 			Origin:  sql.NullString{Valid: false},
 		}
