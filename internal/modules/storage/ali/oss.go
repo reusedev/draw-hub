@@ -132,6 +132,16 @@ func (o *OSSClient) URL(key string, expire time.Duration) (string, error) {
 	return presignResult.URL, nil
 }
 
+// PublicURL 返回公开读对象的直接访问 URL（无签名）
+func (o *OSSClient) PublicURL(key string) string {
+	return "https://" + o.bucketName + "." + strings.TrimPrefix(o.endpoint, "https://") + "/" + key
+}
+
+// PublicResize50URL 返回公开读对象的缩略图 URL（OSS 图片处理，缩放 50%，无签名）
+func (o *OSSClient) PublicResize50URL(key string) string {
+	return o.PublicURL(key) + "?x-oss-process=image/resize,p_50"
+}
+
 func (o *OSSClient) fullPath(fName string) string {
 	return o.directory + fName
 }

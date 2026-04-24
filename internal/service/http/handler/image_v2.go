@@ -141,8 +141,6 @@ func GetImageV2(c *gin.Context) {
 		return
 	}
 
-	duration, _ := time.ParseDuration(config.GConfig.URLExpires)
-
 	data := gin.H{
 		"png_url":       "",
 		"jpg_url":       "",
@@ -150,45 +148,24 @@ func GetImageV2(c *gin.Context) {
 		"thumbnail_url": "",
 	}
 
-	// Raw URL
+	// Raw URL（public，无签名）
 	if img.RawKey != "" {
-		rawURL, err := ali.OssSgClient.URL(img.RawKey, duration)
-		if err != nil {
-			logs.Logger.Err(err).Msg("V2-Image-Get-Raw-URL")
-		} else {
-			data["raw_url"] = rawURL
-		}
+		data["raw_url"] = ali.OssSgClient.PublicURL(img.RawKey)
 	}
 
-	// PNG URL
+	// PNG URL（public，无签名）
 	if img.PNGKey != "" {
-		pngURL, err := ali.OssSgClient.URL(img.PNGKey, duration)
-		if err != nil {
-			logs.Logger.Err(err).Msg("V2-Image-Get-PNG-URL")
-		} else {
-			data["png_url"] = pngURL
-		}
+		data["png_url"] = ali.OssSgClient.PublicURL(img.PNGKey)
 	}
 
-	// JPG URL
+	// JPG URL（public，无签名）
 	if img.JPGKey != "" {
-		jpgURL, err := ali.OssSgClient.URL(img.JPGKey, duration)
-		if err != nil {
-			logs.Logger.Err(err).Msg("V2-Image-Get-JPG-URL")
-		} else {
-			data["jpg_url"] = jpgURL
-		}
+		data["jpg_url"] = ali.OssSgClient.PublicURL(img.JPGKey)
 	}
 
-	// Thumbnail URL（基于 raw key，使用 OSS 图片处理缩放 50%）
-	thumbnailKey := img.RawKey
-	if thumbnailKey != "" {
-		presignResult, err := ali.OssSgClient.Resize50(thumbnailKey, duration)
-		if err != nil {
-			logs.Logger.Err(err).Msg("V2-Image-Get-Thumbnail-URL")
-		} else {
-			data["thumbnail_url"] = presignResult.URL
-		}
+	// Thumbnail URL（基于 raw key，使用 OSS 图片处理缩放 50%，无签名）
+	if img.RawKey != "" {
+		data["thumbnail_url"] = ali.OssSgClient.PublicResize50URL(img.RawKey)
 	}
 
 	// 写入缓存，24 小时有效
@@ -243,7 +220,7 @@ func CreateTaskV2(c *gin.Context) {
 				StorageSupplierName: config.GConfig.CloudStorageSupplier,
 				Bucket:              img.Bucket,
 				Key:                 ossKey,
-				ACL:                 "private",
+				ACL:                 "public-read",
 				CreatedAt:           now,
 			}
 			err = mysql.DB.Create(&inputImage).Error
@@ -343,7 +320,7 @@ func uploadBytesSToSgOSS(key, filename string, data []byte) error {
 		Key:       key,
 		Filename:  filename,
 		File:      bytes.NewReader(data),
-		Acl:       "private",
+		Acl:       "public-read",
 		URLExpire: urlExpire,
 	}
 	_, err := ali.OssSgClient.UploadFile(&req)
