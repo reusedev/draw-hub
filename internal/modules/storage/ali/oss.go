@@ -171,7 +171,7 @@ func (o *OSSClient) upload(fName, key, acl string, reader io.Reader) error {
 		Acl:                oss.ObjectACLType(acl),
 		Key:                oss.Ptr(key),
 		Body:               reader,
-		ContentDisposition: oss.Ptr(fmt.Sprintf("attachment; filename=\"%s\"", fName)),
+		ContentDisposition: oss.Ptr(fmt.Sprintf("inline; filename=\"%s\"", fName)),
 	}
 	_, err := o.client.PutObject(context.TODO(), request)
 	if err != nil {
