@@ -1,12 +1,10 @@
 module github.com/reusedev/draw-hub
 
-go 1.24.0
-
-toolchain go1.24.8
+go 1.25.0
 
 require (
 	github.com/aliyun/alibabacloud-oss-go-sdk-v2 v1.2.2
-	github.com/disintegration/imaging v1.6.2
+	github.com/disintegration/imaging v1.6.3-0.20200122095911-d8633a436aab
 	github.com/eko/gocache/lib/v4 v4.2.0
 	github.com/eko/gocache/store/go_cache/v4 v4.2.2
 	github.com/gin-gonic/gin v1.10.1
@@ -17,8 +15,8 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/image v0.38.0
 	github.com/strukturag/libheif v1.14.0
+	golang.org/x/image v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.26.1
