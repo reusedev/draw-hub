@@ -74,7 +74,7 @@ func UploadImageV2New(c *gin.Context) {
 		return
 	}
 	pngKey := config.GConfig.AliOssSg.Directory + uuid.New().String() + ".png"
-	err = uploadBytesSToSgOSS(pngKey, header.Filename, pngBytes)
+	err = uploadBytesSToSgOSS(pngKey, uuid.New().String()+".png", pngBytes)
 	if err != nil {
 		logs.Logger.Err(err).Msg("V2-Image-Upload-PNG-OSS")
 		c.JSON(http.StatusInternalServerError, response.InternalError)
