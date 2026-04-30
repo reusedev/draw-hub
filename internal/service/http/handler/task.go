@@ -162,7 +162,7 @@ func (h *TaskHandler) edit(ctx context.Context) {
 			ImageURLs:  urls,
 			Prompt:     h.task.Prompt,
 			Quality:    "high",
-			Size:       "",
+			Size:       "2160x3840",
 			Model:      h.task.Model,
 			TaskID:     h.task.Id,
 		}
@@ -221,8 +221,8 @@ func (h *TaskHandler) generate(ctx context.Context) {
 	} else if strings.HasPrefix(h.task.Model, "gpt") {
 		req := gpt.GenericCreateRequest{
 			Prompt:  h.task.Prompt,
-			Quality: h.task.Quality,
-			Size:    h.task.Size,
+			Quality: "high",
+			Size:    "2160x3840",
 			Model:   h.task.Model,
 			TaskID:  h.task.Id,
 		}
