@@ -165,6 +165,7 @@ type GenericRequest struct {
 	Quality    string   `json:"quality"`
 	Size       string   `json:"size"`
 	Model      string   `json:"model"`
+	TokenDesc  string   `json:"-"` // 不序列化，仅用于内部路由判断
 }
 
 func (g *GenericRequest) isEdit() bool {
@@ -175,6 +176,10 @@ func (g *GenericRequest) BodyContentType(supplier consts.ModelSupplier) (io.Read
 	if supplier == consts.Geek {
 		// Geek supplier: unified JSON endpoint for both generate and edit
 		return g.geekJSON()
+	}
+	if supplier == consts.Tuzi && g.TokenDesc == "default" {
+		// Tuzi default分组: 使用chat completions接口
+		return g.tuziChatJSON()
 	}
 	if g.isEdit() {
 		// edit: multipart/form-data (OpenAI compatible)
@@ -267,10 +272,61 @@ func (g *GenericRequest) geekJSON() (io.Reader, string, error) {
 	return bytes.NewBuffer(data), "application/json", nil
 }
 
+// tuziChatJSON builds a chat completions JSON body for Tuzi default tokens.
+// Uses the same format as Image4oRequest: v1/chat/completions with inline base64 images.
+func (g *GenericRequest) tuziChatJSON() (io.Reader, string, error) {
+	userContent := []map[string]interface{}{
+		{
+			"type": "text",
+			"text": g.Prompt,
+		},
+	}
+	// 优先使用 ImageURLs
+	if len(g.ImageURLs) > 0 {
+		for _, url := range g.ImageURLs {
+			userContent = append(userContent, map[string]interface{}{
+				"type": "image_url",
+				"image_url": map[string]string{
+					"url": url,
+				},
+			})
+		}
+	} else if len(g.ImageBytes) > 0 {
+		for _, img := range g.ImageBytes {
+			imageByte := base64.StdEncoding.EncodeToString(img)
+			userContent = append(userContent, map[string]interface{}{
+				"type": "image_url",
+				"image_url": map[string]string{
+					"url": "data:image/png;base64," + imageByte,
+				},
+			})
+		}
+	}
+	body := map[string]interface{}{
+		"model":  g.Model,
+		"stream": false,
+		"messages": []map[string]interface{}{
+			{
+				"role":    "user",
+				"content": userContent,
+			},
+		},
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, "", err
+	}
+	return bytes.NewBuffer(data), "application/json", nil
+}
+
 func (g *GenericRequest) Path(supplier consts.ModelSupplier) string {
 	if supplier == consts.Geek {
 		// GeekAI uses a unified endpoint for both generate and edit
 		return "v1/images/generations"
+	}
+	if supplier == consts.Tuzi && g.TokenDesc == "default" {
+		// Tuzi default分组: 使用chat completions接口
+		return "v1/chat/completions"
 	}
 	if g.isEdit() {
 		return "v1/images/edits"

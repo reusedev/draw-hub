@@ -243,8 +243,16 @@ func (p *Provider) Create(request GenericCreateRequest) {
 			Quality:    request.Quality,
 			Size:       request.Size,
 			Model:      request.Model,
+			TokenDesc:  token.Desc,
 		}
-		requester := image.NewRequester(p.Ctx, ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage2Parser())
+		// Tuzi default分组使用chat completions接口，响应格式不同，需要用Image4oParser解析
+		var parser image.Parser[image.Response]
+		if token.Supplier == consts.Tuzi && token.Desc == "default" {
+			parser = NewImage4oParser()
+		} else {
+			parser = NewImage2Parser()
+		}
+		requester := image.NewRequester(p.Ctx, ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, parser)
 		requester.SetTaskID(request.TaskID)
 		response := requester.Do()
 		ret = append(ret, response)
