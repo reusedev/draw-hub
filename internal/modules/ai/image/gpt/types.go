@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/reusedev/draw-hub/internal/consts"
-	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 )
 
 type Image4oRequest struct {
@@ -153,4 +154,140 @@ func (g *Image1Request) InitResponse(supplier string, tokenDesc string) image.Re
 		},
 	}
 	return ret
+}
+
+// GenericRequest supports both generate (JSON) and edit (multipart/form-data) for gpt-image-2 etc.
+// For Geek supplier, both generate and edit use unified JSON endpoint (v1/images/generations).
+type GenericRequest struct {
+	ImageBytes [][]byte `json:"image_bytes"`
+	ImageURLs  []string `json:"image_urls"`
+	Prompt     string   `json:"prompt"`
+	Quality    string   `json:"quality"`
+	Size       string   `json:"size"`
+	Model      string   `json:"model"`
+}
+
+func (g *GenericRequest) isEdit() bool {
+	return len(g.ImageBytes) > 0 || len(g.ImageURLs) > 0
+}
+
+func (g *GenericRequest) BodyContentType(supplier consts.ModelSupplier) (io.Reader, string, error) {
+	if supplier == consts.Geek {
+		// Geek supplier: unified JSON endpoint for both generate and edit
+		return g.geekJSON()
+	}
+	if g.isEdit() {
+		// edit: multipart/form-data (OpenAI compatible)
+		payload := &bytes.Buffer{}
+		writer := multipart.NewWriter(payload)
+
+		for _, b := range g.ImageBytes {
+			header := make(textproto.MIMEHeader)
+			header.Set("Content-Type", http.DetectContentType(b))
+			header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="image"; filename="%s"`, "image.png"))
+			filePart, err := writer.CreatePart(header)
+			if err != nil {
+				return nil, "", err
+			}
+			_, err = filePart.Write(b)
+			if err != nil {
+				return nil, "", err
+			}
+		}
+		_ = writer.WriteField("prompt", g.Prompt)
+		_ = writer.WriteField("model", g.Model)
+		_ = writer.WriteField("n", "1")
+		if g.Quality != "" {
+			_ = writer.WriteField("quality", g.Quality)
+		}
+		if g.Size != "" {
+			_ = writer.WriteField("size", g.Size)
+		}
+		err := writer.Close()
+		if err != nil {
+			return nil, "", err
+		}
+		return payload, writer.FormDataContentType(), nil
+	}
+	// generate: JSON
+	body := map[string]interface{}{
+		"model":  g.Model,
+		"prompt": g.Prompt,
+		"n":      1,
+	}
+	if g.Quality != "" {
+		body["quality"] = g.Quality
+	}
+	if g.Size != "" {
+		body["size"] = g.Size
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, "", err
+	}
+	return bytes.NewBuffer(data), "application/json", nil
+}
+
+// geekJSON builds a JSON body for GeekAI's unified gpt-image-2 API.
+// Single image -> "image" field, multiple images -> "images" field.
+// ImageURLs take priority over ImageBytes.
+func (g *GenericRequest) geekJSON() (io.Reader, string, error) {
+	body := map[string]interface{}{
+		"model":  g.Model,
+		"prompt": g.Prompt,
+	}
+	if g.Quality != "" {
+		body["quality"] = g.Quality
+	}
+	if g.Size != "" {
+		body["size"] = g.Size
+	}
+	if len(g.ImageURLs) > 0 {
+		// URL 优先
+		if len(g.ImageURLs) == 1 {
+			body["image"] = g.ImageURLs[0]
+		} else {
+			body["images"] = g.ImageURLs
+		}
+	} else if len(g.ImageBytes) > 0 {
+		if len(g.ImageBytes) == 1 {
+			body["image"] = base64.StdEncoding.EncodeToString(g.ImageBytes[0])
+		} else {
+			images := make([]string, 0, len(g.ImageBytes))
+			for _, img := range g.ImageBytes {
+				images = append(images, base64.StdEncoding.EncodeToString(img))
+			}
+			body["images"] = images
+		}
+	}
+	data, err := jsoniter.Marshal(body)
+	if err != nil {
+		return nil, "", err
+	}
+	return bytes.NewBuffer(data), "application/json", nil
+}
+
+func (g *GenericRequest) Path(supplier consts.ModelSupplier) string {
+	if supplier == consts.Geek {
+		// GeekAI uses a unified endpoint for both generate and edit
+		return "v1/images/generations"
+	}
+	if g.isEdit() {
+		return "v1/images/edits"
+	}
+	return "v1/images/generations"
+}
+func (g *GenericRequest) InitResponse(supplier string, tokenDesc string) image.Response {
+	return &GenericResponse{
+		image.BaseResponse{
+			Supplier:  supplier,
+			TokenDesc: tokenDesc,
+			Model:     g.Model,
+			URLs:      []string{},
+		},
+	}
+}
+
+type GenericResponse struct {
+	image.BaseResponse
 }

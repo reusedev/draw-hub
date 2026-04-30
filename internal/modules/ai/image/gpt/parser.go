@@ -55,3 +55,14 @@ func (g *gptImage1B64Strategy) ExtractB64s(body []byte) ([]string, error) {
 	}
 	return b64s, nil
 }
+
+type Image2Parser struct {
+	*image.GenericParser
+}
+
+func NewImage2Parser() *Image2Parser {
+	return &Image2Parser{
+		GenericParser: image.NewGenericParser(&image.OpenAIURLStrategy{}, &gptImage1B64Strategy{}),
+	}
+}
+

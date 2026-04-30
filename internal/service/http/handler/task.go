@@ -156,6 +156,17 @@ func (h *TaskHandler) edit(ctx context.Context) {
 			TaskID:     h.task.Id,
 		}
 		volc.NewProvider(ctx, []observer.Observer{h}).Create(req)
+	} else if strings.HasPrefix(h.task.Model, "gpt") {
+		req := gpt.GenericCreateRequest{
+			ImageBytes: bs,
+			ImageURLs:  urls,
+			Prompt:     h.task.Prompt,
+			Quality:    "high",
+			Size:       "",
+			Model:      h.task.Model,
+			TaskID:     h.task.Id,
+		}
+		gpt.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else if h.task.Model == consts.MidJourney.String() {
 		prompt := h.task.Prompt
 		if !strings.Contains(prompt, "--sref") {
@@ -207,6 +218,15 @@ func (h *TaskHandler) generate(ctx context.Context) {
 			TaskID: h.task.Id,
 		}
 		volc.NewProvider(ctx, []observer.Observer{h}).Create(req)
+	} else if strings.HasPrefix(h.task.Model, "gpt") {
+		req := gpt.GenericCreateRequest{
+			Prompt:  h.task.Prompt,
+			Quality: h.task.Quality,
+			Size:    h.task.Size,
+			Model:   h.task.Model,
+			TaskID:  h.task.Id,
+		}
+		gpt.NewProvider(ctx, []observer.Observer{h}).Create(req)
 	} else if h.task.Model == consts.MidJourney.String() {
 		req := mj.Request{
 			Prompt: h.task.Prompt,

@@ -190,3 +190,88 @@ func (p *Provider) FastSpeed(request FastRequest) {
 	}
 	once.Do(func() { p.Notify(consts.EventTaskEnd, ret) })
 }
+
+type GenericCreateRequest struct {
+	ImageBytes [][]byte `json:"image_bytes"`
+	ImageURLs  []string `json:"image_urls"`
+	Prompt     string   `json:"prompt"`
+	Quality    string   `json:"quality"`
+	Size       string   `json:"size"`
+	Model      string   `json:"model"`
+	TaskID     int      `json:"task_id"`
+}
+
+func (p *Provider) Create(request GenericCreateRequest) {
+	var once sync.Once
+	defer func() {
+		once.Do(func() {
+			p.Notify(consts.EventSysExit, &image.GenericSysExitResponse{
+				TaskID: request.TaskID,
+			})
+		})
+	}()
+
+	logs.Logger.Info().
+		Int("task_id", request.TaskID).
+		Str("method", "Create").
+		Str("model", request.Model).
+		Msg("GPT Create method started")
+
+	ret := make([]image.Response, 0)
+	getToken := ai.GTokenManager[request.Model].GetTokenIterator()
+	for {
+		select {
+		case <-p.Ctx.Done():
+			return
+		default:
+		}
+		token := getToken()
+		if token == nil {
+			break
+		}
+		logs.Logger.Info().
+			Int("task_id", request.TaskID).
+			Str("supplier", token.Supplier.String()).
+			Str("token_desc", token.Desc).
+			Str("model", token.Model).
+			Msg("Attempting GPT Create request")
+
+		content := GenericRequest{
+			ImageBytes: request.ImageBytes,
+			ImageURLs:  request.ImageURLs,
+			Prompt:     request.Prompt,
+			Quality:    request.Quality,
+			Size:       request.Size,
+			Model:      request.Model,
+		}
+		requester := image.NewRequester(p.Ctx, ai.Token{Token: token.Token.Token, Desc: token.Desc, Supplier: token.Supplier}, &content, NewImage2Parser())
+		requester.SetTaskID(request.TaskID)
+		response := requester.Do()
+		ret = append(ret, response)
+		if response.Succeed() {
+			urls := response.GetURLs()
+			logs.Logger.Info().
+				Int("task_id", request.TaskID).
+				Str("supplier", token.Supplier.String()).
+				Str("model", token.Model).
+				Strs("image_urls", urls).
+				Msg("GPT Create request succeeded, stopping iteration")
+			break
+		}
+		logs.Logger.Warn().
+			Int("task_id", request.TaskID).
+			Str("supplier", token.Supplier.String()).
+			Str("model", token.Model).
+			Msg("GPT Create request completed but failed validation, continuing")
+		if response.GetError() != nil {
+			if errors.Is(response.GetError(), image.PromptError) {
+				break
+			}
+		}
+		if image.ShouldBanToken(response) {
+			ai.GTokenManager[request.Model].Ban(token.Supplier, time.Now().Add(10*time.Minute))
+		}
+	}
+	once.Do(func() { p.Notify(consts.EventTaskEnd, ret) })
+}
+

@@ -1,12 +1,12 @@
 package gpt
 
 import (
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestImage4oParser_Parse(t *testing.T) {
@@ -44,10 +44,11 @@ func TestImage4oParser_Parse(t *testing.T) {
 		}
 
 		response := &Image4oResponse{
-			Supplier:  "v3",
-			TokenDesc: "default",
-			Model:     "gpt-4o-image-vip",
-			Duration:  111890 * time.Microsecond,
+			image.BaseResponse{
+				Supplier:  "v3",
+				TokenDesc: "default",
+				Model:     "gpt-4o-image-vip",
+			},
 		}
 
 		err := parser.Parse(resp, response)
@@ -85,10 +86,11 @@ func TestImage4oParser_Parse(t *testing.T) {
 		}
 
 		response := &Image4oResponse{
-			Supplier:  "test",
-			TokenDesc: "test",
-			Model:     "test",
-			Duration:  1000 * time.Microsecond,
+			image.BaseResponse{
+				Supplier:  "v3",
+				TokenDesc: "default",
+				Model:     "gpt-4o-image-vip",
+			},
 		}
 
 		err := parser.Parse(resp, response)
@@ -126,10 +128,11 @@ func TestImage4oParser_Parse(t *testing.T) {
 		}
 
 		response := &Image4oResponse{
-			Supplier:  "test",
-			TokenDesc: "test",
-			Model:     "test",
-			Duration:  1000 * time.Microsecond,
+			image.BaseResponse{
+				Supplier:  "v3",
+				TokenDesc: "default",
+				Model:     "gpt-4o-image-vip",
+			},
 		}
 
 		err := parser.Parse(resp, response)
@@ -194,10 +197,11 @@ func TestImage4oParser_Integration(t *testing.T) {
 	}
 
 	response := &Image4oResponse{
-		Supplier:  "v3",
-		TokenDesc: "default",
-		Model:     "gpt-4o-image-vip",
-		Duration:  111890 * time.Microsecond,
+		image.BaseResponse{
+			Supplier:  "v3",
+			TokenDesc: "default",
+			Model:     "gpt-4o-image-vip",
+		},
 	}
 
 	err := parser.Parse(resp, response)
