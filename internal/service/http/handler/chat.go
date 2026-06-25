@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/reusedev/draw-hub/internal/consts"
+	"github.com/reusedev/draw-hub/internal/modules/ai"
 	"github.com/reusedev/draw-hub/internal/modules/ai/chat"
 	"github.com/reusedev/draw-hub/internal/modules/ai/chat/common"
 	"github.com/reusedev/draw-hub/internal/modules/logs"
@@ -97,7 +99,11 @@ func Image2Text(c *gin.Context) {
 
 	// 默认模型
 	if req.Model == "" {
-		req.Model = "gpt-5"
+		req.Model = consts.GPT5.String()
+	}
+	if ai.GTokenManager[req.Model] == nil {
+		c.JSON(http.StatusBadRequest, response.ParamErrorWithMessage("unsupported model"))
+		return
 	}
 
 	// 构造 chat CommonRequest，包含 image_url + text 两种 content

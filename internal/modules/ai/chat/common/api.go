@@ -9,7 +9,12 @@ import (
 
 func Chat(request chat.CommonRequest) []chat.Response {
 	ret := make([]chat.Response, 0)
-	getToken := ai.GTokenManager[request.Model].GetTokenIterator()
+	tokenManager := ai.GTokenManager[request.Model]
+	if tokenManager == nil {
+		logs.Logger.Error().Str("model", request.Model).Msg("chat model token manager not found")
+		return ret
+	}
+	getToken := tokenManager.GetTokenIterator()
 	for {
 		token := getToken()
 		if token == nil {

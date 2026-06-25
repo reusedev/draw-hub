@@ -6,8 +6,20 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/reusedev/draw-hub/internal/modules/ai/image"
 )
+
+func newFlashImageTestResponse(supplier, tokenDesc, model string) *FlashImageResponse {
+	return &FlashImageResponse{
+		BaseResponse: image.BaseResponse{
+			Supplier:  supplier,
+			TokenDesc: tokenDesc,
+			Model:     model,
+			URLs:      []string{},
+		},
+	}
+}
 
 func TestFlashImageParser_Parse(t *testing.T) {
 	parser := NewFlashImageParser()
@@ -27,12 +39,7 @@ data: [DONE]`
 			},
 		}
 
-		response := &FlashImageResponse{
-			Supplier:  "test",
-			TokenDesc: "test",
-			Model:     "gemini-2.5-flash-image",
-			Duration:  1000 * time.Microsecond,
-		}
+		response := newFlashImageTestResponse("test", "test", "gemini-2.5-flash-image")
 
 		err := parser.Parse(resp, response)
 		if err != nil {
@@ -77,12 +84,7 @@ data: [DONE]`
 			},
 		}
 
-		response := &FlashImageResponse{
-			Supplier:  "test",
-			TokenDesc: "test",
-			Model:     "gemini-2.5-flash-image-preview",
-			Duration:  1500 * time.Microsecond,
-		}
+		response := newFlashImageTestResponse("test", "test", "gemini-2.5-flash-image-preview")
 
 		err := parser.Parse(resp, response)
 		if err != nil {
@@ -126,12 +128,7 @@ data: [DONE]`
 			},
 		}
 
-		response := &FlashImageResponse{
-			Supplier:  "test",
-			TokenDesc: "test",
-			Model:     "gemini-test-model",
-			Duration:  2000 * time.Microsecond,
-		}
+		response := newFlashImageTestResponse("test", "test", "gemini-test-model")
 
 		err := parser.Parse(resp, response)
 		if err != nil {
@@ -175,12 +172,7 @@ data: [DONE]`
 			},
 		}
 
-		response := &FlashImageResponse{
-			Supplier:  "test",
-			TokenDesc: "test",
-			Model:     "gemini-test",
-			Duration:  500 * time.Microsecond,
-		}
+		response := newFlashImageTestResponse("test", "test", "gemini-test")
 
 		err := parser.Parse(resp, response)
 		if err != nil {
@@ -219,12 +211,7 @@ func TestFlashImageParser_Integration(t *testing.T) {
 		},
 	}
 
-	response := &FlashImageResponse{
-		Supplier:  "gemini",
-		TokenDesc: "default",
-		Model:     "gemini-2.5-flash-image-preview",
-		Duration:  1500 * time.Microsecond,
-	}
+	response := newFlashImageTestResponse("gemini", "default", "gemini-2.5-flash-image-preview")
 
 	err := parser.Parse(resp, response)
 	if err != nil {

@@ -2,6 +2,7 @@ package ali
 
 import (
 	"github.com/reusedev/draw-hub/config"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -9,17 +10,32 @@ import (
 
 func init() {
 	aliOssConfig := config.AliOss{
-		AccessKeyId:     "",
-		AccessKeySecret: "",
+		AccessKeyId:     "test-access-key",
+		AccessKeySecret: "test-access-secret",
 		Endpoint:        "https://oss-ap-southeast-1.aliyuncs.com",
 		Region:          "ap-southeast-1",
-		Bucket:          "",
+		Bucket:          "test-bucket",
 		Directory:       "draw_hub/",
 	}
 	InitOSS(aliOssConfig)
 }
 
 func TestUpload(t *testing.T) {
+	accessKeyID := os.Getenv("ALI_OSS_ACCESS_KEY_ID")
+	accessKeySecret := os.Getenv("ALI_OSS_ACCESS_KEY_SECRET")
+	bucket := os.Getenv("ALI_OSS_BUCKET")
+	if accessKeyID == "" || accessKeySecret == "" || bucket == "" {
+		t.Skip("set ALI_OSS_ACCESS_KEY_ID, ALI_OSS_ACCESS_KEY_SECRET, and ALI_OSS_BUCKET to run live OSS upload test")
+	}
+	InitOSS(config.AliOss{
+		AccessKeyId:     accessKeyID,
+		AccessKeySecret: accessKeySecret,
+		Endpoint:        getenvDefault("ALI_OSS_ENDPOINT", "https://oss-ap-southeast-1.aliyuncs.com"),
+		Region:          getenvDefault("ALI_OSS_REGION", "ap-southeast-1"),
+		Bucket:          bucket,
+		Directory:       getenvDefault("ALI_OSS_DIRECTORY", "draw_hub/"),
+	})
+
 	req := UploadRequest{
 		Filename:  "test.txt",
 		File:      strings.NewReader("123"),
@@ -31,6 +47,13 @@ func TestUpload(t *testing.T) {
 		t.Error(err)
 	}
 	t.Log(resp)
+}
+
+func getenvDefault(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func TestSignURL(t *testing.T) {

@@ -13,18 +13,18 @@ func TestGetToken(t *testing.T) {
 		Token: [][]TokenWithModel{
 			{
 				{
-					Token{Token: "sk-1"},
-					"gpt-4o-image",
+					Token: Token{Token: "sk-1"},
+					Model: "gpt-4o-image",
 				},
 				{
-					Token{Token: "sk-2"},
-					"gpt-4o-image",
+					Token: Token{Token: "sk-2"},
+					Model: "gpt-4o-image",
 				},
 			},
 			{
 				{
-					Token{Token: "sk-3"},
-					"gpt-4o-image-vip",
+					Token: Token{Token: "sk-3"},
+					Model: "gpt-4o-image-vip",
 				},
 			},
 		},
@@ -42,16 +42,16 @@ func TestGetToken(t *testing.T) {
 	}
 	require.Equal(t, []*TokenWithModel{
 		{
-			Token{Token: "sk-1"},
-			"gpt-4o-image",
+			Token: Token{Token: "sk-1"},
+			Model: "gpt-4o-image",
 		},
 		{
-			Token{Token: "sk-2"},
-			"gpt-4o-image",
+			Token: Token{Token: "sk-2"},
+			Model: "gpt-4o-image",
 		},
 		{
-			Token{Token: "sk-3"},
-			"gpt-4o-image-vip",
+			Token: Token{Token: "sk-3"},
+			Model: "gpt-4o-image-vip",
 		}}, tokens)
 }
 
@@ -76,18 +76,18 @@ func TestBanToken(t *testing.T) {
 		Token: [][]TokenWithModel{
 			{
 				{
-					Token{Token: "sk-1", Supplier: consts.Tuzi},
-					"gpt-4o-image",
+					Token: Token{Token: "sk-1", Supplier: consts.Tuzi},
+					Model: "gpt-4o-image",
 				},
 				{
-					Token{Token: "sk-2", Supplier: consts.Tuzi},
-					"gpt-4o-image",
+					Token: Token{Token: "sk-2", Supplier: consts.Tuzi},
+					Model: "gpt-4o-image",
 				},
 			},
 			{
 				{
-					Token{Token: "sk-3", Supplier: consts.Geek},
-					"gpt-4o-image-vip",
+					Token: Token{Token: "sk-3", Supplier: consts.Geek},
+					Model: "gpt-4o-image-vip",
 				},
 			},
 		},
@@ -108,11 +108,11 @@ func TestBanToken(t *testing.T) {
 	}
 	require.Equal(t, []*TokenWithModel{
 		{
-			Token{Token: "sk-1", Supplier: consts.Tuzi},
-			"gpt-4o-image",
+			Token: Token{Token: "sk-1", Supplier: consts.Tuzi},
+			Model: "gpt-4o-image",
 		},
 		{
-			Token{Token: "sk-2", Supplier: consts.Tuzi},
-			"gpt-4o-image",
+			Token: Token{Token: "sk-2", Supplier: consts.Tuzi},
+			Model: "gpt-4o-image",
 		}}, tokens)
 }

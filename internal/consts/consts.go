@@ -32,6 +32,7 @@ const (
 	GPT4oImageVip   Model = "gpt-4o-image-vip"
 	GPTImage1       Model = "gpt-image-1"
 	GPTImage2       Model = "gpt-image-2"
+	GPT5            Model = "gpt-5"
 	Gemini25Flash   Model = "gemini-2.5-flash-image"
 	Gemini25FlashHD Model = "gemini-2.5-flash-image-hd"
 	JiMengV40       Model = "jimeng_t2i_v40"

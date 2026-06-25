@@ -3,7 +3,6 @@ package ai
 import (
 	"context"
 	"fmt"
-	"math/rand"
 
 	"github.com/google/uuid"
 	"github.com/reusedev/draw-hub/internal/consts"
@@ -144,13 +143,9 @@ func (t *TokenManager) popBanSupplierIfAllBan() {
 }
 
 func (t *TokenManager) getValidToken(client *Client) *TokenWithModel {
-	// 随机打乱 group 遍历顺序
-	groupOrder := rand.Perm(len(t.Token))
-	for _, i := range groupOrder {
+	for i := range t.Token {
 		tokens := t.Token[i]
-		// 随机打乱 group 内 token 遍历顺序
-		tokenOrder := rand.Perm(len(tokens))
-		for _, j := range tokenOrder {
+		for j := range tokens {
 			if client.CanTry(i, j) && t.validToken(tokens[j]) {
 				client.TryIndex[i][j] = 1
 				return &tokens[j]
