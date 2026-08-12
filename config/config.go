@@ -117,6 +117,7 @@ type RequestOrder struct {
 	GPTImage1       [][]Request `yaml:"gpt-image-1"`
 	GPTImage2       [][]Request `yaml:"gpt-image-2"`
 	DeepSearch      [][]Request `yaml:"deepsearch"`
+	Grok45          [][]Request `yaml:"grok-4.5"`
 	GPT5            [][]Request `yaml:"gpt-5"`
 	Gemini25Flash   [][]Request `yaml:"gemini-2.5-flash-image"`
 	Gemini25FlashHD [][]Request `yaml:"gemini-2.5-flash-image-hd"`
