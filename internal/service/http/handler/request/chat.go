@@ -9,16 +9,21 @@ type ChatRequest interface {
 type ChatCompletion struct {
 	Model    string    `json:"model"`
 	Messages []Message `json:"messages"`
-}
-
-type ChatCompletionV2 struct {
-	Model    string      `json:"model"`
-	Messages []MessageV2 `json:"messages"`
+	Tools    []Tool    `json:"tools,omitempty"`
 }
 
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+}
+
+type Tool struct {
+	Type string `json:"type"`
+}
+
+type ChatCompletionV2 struct {
+	Model    string      `json:"model"`
+	Messages []MessageV2 `json:"messages"`
 }
 
 type MessageV2 struct {
@@ -50,6 +55,14 @@ func (c *ChatCompletion) ToChatCommonRequest() chat.CommonRequest {
 					Text: msg.Content,
 				},
 			},
+		}
+	}
+	if len(c.Tools) > 0 {
+		ret.Tools = make([]chat.Tool, len(c.Tools))
+		for i, tool := range c.Tools {
+			ret.Tools[i] = chat.Tool{
+				Type: tool.Type,
+			}
 		}
 	}
 	return ret
